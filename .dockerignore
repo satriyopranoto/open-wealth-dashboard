@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Runtime cache (di-mount sebagai volume)
+cache/
+
+# Environment & secrets
+.env
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+
+# IDE
+.vscode/
+.idea/
