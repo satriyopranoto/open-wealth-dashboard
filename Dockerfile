@@ -29,4 +29,6 @@ ENV FLASK_ENV=production
 ENV API_BASE_URL=http://localhost:5000
 ENV FLASK_PORT=5000
 
-CMD ["python", "app.py"]
+# 1 worker karena app pakai global dict untuk SSE progress tracking
+# 4 threads untuk handle concurrent requests (setara threaded=True di Flask dev server)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "4", "--timeout", "120", "app:app"]
