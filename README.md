@@ -11,33 +11,6 @@ Open-source stock analysis engine for US and Indonesian (IDX) markets. Built wit
 - **Fundamental Data** — 12 core metrics, company profile, ownership structure (major + institutional holders)
 - **Market Intelligence** — Top 10 news from Google News (Indonesian + English)
 
-## Quick Start
-
-```bash
-# 1. Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate        # Linux/macOS
-# venv\Scripts\activate         # Windows
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure environment
-cp .env.example .env            # or create .env manually (see below)
-
-# 4. Run
-python app.py
-# → http://localhost:5000
-```
-
-**.env** file:
-```
-FLASK_APP=app.py
-FLASK_ENV=development
-API_BASE_URL=http://127.0.0.1:5000
-FLASK_PORT=5000
-```
-
 ## Ticker Format
 
 | Market | Format | Example |
@@ -98,7 +71,58 @@ Single-file Flask backend ([app.py](app.py)) + single-page HTML frontend ([templ
 
 ## Deployment
 
-For network/production deployments, update `API_BASE_URL` in `.env` to the server's public address. See `CONFIG.md` for detailed scenarios.
+### Docker (recommended)
+
+**Prerequisite:** Docker Desktop installed and running.
+
+```bash
+# Build image dan jalankan container
+docker compose up --build
+
+# Akses di browser
+http://localhost:5000
+
+# Jalankan di background
+docker compose up --build -d
+
+# Stop
+docker compose down
+```
+
+Folder `cache/` di-mount sebagai bind-mount ke host — data cache tetap ada meski container di-restart atau dihapus.
+
+**Akses dari device lain di jaringan lokal**, edit `API_BASE_URL` di `docker-compose.yml`:
+```yaml
+environment:
+  - API_BASE_URL=http://<IP-komputer-kamu>:5000
+```
+Lalu rebuild: `docker compose up --build`.
+
+---
+
+### Manual (tanpa Docker)
+
+```bash
+# 1. Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate        # Linux/macOS
+# venv\Scripts\activate         # Windows
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Buat file .env
+FLASK_APP=app.py
+FLASK_ENV=development
+API_BASE_URL=http://127.0.0.1:5000
+FLASK_PORT=5000
+
+# 4. Run
+python app.py
+# → http://localhost:5000
+```
+
+For other deployment scenarios (network access, production URL), see `CONFIG.md`.
 
 ---
 
