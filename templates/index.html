@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Open Wealth Dashboard | Stock Analyzer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+        :root {
+            --primary-gold: #d4af37;
+            --glass-bg: rgba(22, 19, 11, 0.75);
+            --glass-border: rgba(212, 175, 55, 0.2);
+            --text-on-surface: #eae1d4;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCMu5EWSuuffeagIuHffDkveMWtT08JuxsqyZl61ba0RnfeHo88nUBHu6upkd_ptF3GPO72FAwPNIXojwNCk_oSBiQd54aruFWn85W20TEJGT2CMTH6tZYtYPlfulR4bdsBDZu8LgyK0RD4zKIQNu6cVApXm6zVhefFyHJNrvmdWK-47toYyvryhqHUsIgznyrrpopmWd_IZzmP31PnUxk1Pphv14a6i7DjB6luIgZTQGvRZmzE1xduZ703SPZcgqTlUXnex914FOw');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-on-surface);
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+            letter-spacing: -0.01em;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(212, 175, 55, 0.3) !important;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary-gold) !important;
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+            outline: none;
+        }
+
+        button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .btn-gold {
+            background-color: var(--primary-gold);
+            color: #16130b;
+        }
+
+        .btn-gold:hover {
+            background-color: #e9c349;
+            transform: translateY(-1px);
+        }
+
+        #status {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+        }
+
+        .info-box, .timestamp-box, .fundamental-item, .lot-size-calculator-section, .holders-section, .fundamental-section {
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .value {
+            font-family: 'Manrope', sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .positive { color: #4ade80 !important; }
+        .negative { color: #f87171 !important; }
+
+        .holders-table th {
+            border-bottom: 1px solid var(--glass-border);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            color: #99907c;
+        }
+
+        .holders-table td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #result-area {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        /* Financial Terminal Aesthetics */
+        .data-label {
+            color: #99907c;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        #stock-chart-img {
+            filter: contrast(1.1) brightness(0.9);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+    </style>
+</head>
+<body>
+<div class="container space-y-8"><nav class="flex justify-center mb-12 border-b border-[#d4af37]/20 pb-4">
+<div class="flex gap-8">
+<!-- Fundamental Screener Dropdown -->
+<div class="relative group">
+<button class="flex items-center gap-2 text-sm font-bold tracking-[0.2em] uppercase text-[#d4af37] hover:text-[#e9c349] transition-colors">
+<span>Fundamental Screener</span>
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</button>
+<div class="absolute left-0 mt-2 w-64 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+<div class="p-2 flex flex-col">
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-most-active'); return false;">US Most Active Stocks</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('most-active'); return false;">ID Most Active Stocks</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-day-gainers'); return false;">US Day Gainers</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('day-gainers'); return false;">ID Day Gainers</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-net-net'); return false;">US Net Net Strategy</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('net-net'); return false;">ID Net Net Strategy</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-acquirers-multiple'); return false;">US The Acquirers Multiple</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all" href="#" onclick="loadScreener('acquirers-multiple'); return false;">ID The Acquirers Multiple</a>
+</div>
+</div>
+</div>
+<!-- Technical Screener Dropdown -->
+<div class="relative group">
+<button class="flex items-center gap-2 text-sm font-bold tracking-[0.2em] uppercase text-[#d4af37] hover:text-[#e9c349] transition-colors">
+<span>Technical Screener</span>
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</button>
+<div class="absolute left-0 mt-2 w-56 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+<div class="p-2 flex flex-col">
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-bb-breakout'); return false;">US BB Breakout</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-bb-breakout'); return false;">ID BB Breakout</a>
+</div>
+</div>
+</div>
+<!-- Data Extraction Dropdown -->
+<div class="relative group">
+<button class="flex items-center gap-2 text-sm font-bold tracking-[0.2em] uppercase text-[#d4af37] hover:text-[#e9c349] transition-colors">
+<span>Data Syncronization</span>
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</button>
+<div class="absolute left-0 mt-2 w-56 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+<div class="p-2 flex flex-col">
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="extractStockData('us'); return false;">Syncronize US Stocks Data</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="extractStockData('id'); return false;">Syncronize ID Stocks Data</a>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<header class="text-center space-y-4">
+<h1 class="text-5xl text-[#d4af37]">Open Wealth Dashboard</h1>
+<p class="text-[#99907c] tracking-[0.3em] uppercase text-xs">Open Source Stock Analysis Engine</p>
+</header>
+<div class="glass-panel p-8 space-y-6">
+<div class="flex flex-col md:flex-row gap-4">
+<input class="flex-1 px-6 py-4 rounded-sm text-lg" id="ticker" placeholder="ENTER TICKER (e.g. AAPL, BRMS.JK)..." type="text" value="TSLA"/>
+<button class="btn-gold px-10 py-4 rounded-sm" onclick="analyzeStock()">Analyze</button>
+</div>
+<p class="text-center text-[11px] text-[#99907c] tracking-wider uppercase">
+                Yahoo Finance standard format. Indonesian stocks suffix: <span class="text-[#d4af37]">.JK</span>
+</p>
+</div>
+<div class="text-center text-lg h-8" id="status"></div>
+<!-- Screener Results Container -->
+<div class="hidden glass-panel p-8" id="screener-results">
+    <h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+        <span class="w-8 h-[1px] bg-[#d4af37]"></span> <span id="screener-title">ID Most Active Stocks</span>
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-[#d4af37]/20">
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Date</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Value (M)</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Recommendation</th>
+                </tr>
+            </thead>
+            <tbody id="screener-body" class="text-[#eae1d4]"></tbody>
+        </table>
+    </div>
+</div>
+<!-- Extraction Progress Container -->
+<div class="hidden glass-panel p-8" id="extraction-progress">
+    <h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+        <span class="w-8 h-[1px] bg-[#d4af37]"></span> <span id="extraction-title">Data Extraction</span>
+    </h3>
+    <div class="space-y-4">
+        <div class="flex justify-between items-center">
+            <span class="text-[#99907c] text-sm uppercase tracking-wider" id="extraction-status">Initializing...</span>
+            <span class="text-[#d4af37] font-bold text-lg" id="extraction-counter">0 / 0</span>
+        </div>
+        <div class="relative w-full bg-[#2d2a21] rounded-full h-6 overflow-hidden border border-[#d4af37]/30">
+            <div class="absolute inset-0 bg-gradient-to-r from-[#d4af37]/20 to-transparent"></div>
+            <div class="relative h-full bg-[#d4af37] rounded-full transition-all duration-300" id="extraction-bar" style="width: 0%">
+                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-black drop-shadow-sm" id="extraction-percent">0%</span>
+            </div>
+        </div>
+        <div class="text-center">
+            <span class="text-[#99907c] text-xs" id="extraction-ticker"></span>
+        </div>
+        <div class="flex justify-center gap-8 text-sm pt-2">
+            <div class="text-center">
+                <span class="text-[#4ade80] font-bold" id="extraction-success">0</span>
+                <span class="text-[#99907c] text-xs block">Success</span>
+            </div>
+            <div class="text-center">
+                <span class="text-[#f87171] font-bold" id="extraction-failed">0</span>
+                <span class="text-[#99907c] text-xs block">Failed</span>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="space-y-8 hidden" id="result-area">
+<!-- Market Overview -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="glass-panel p-6 flex flex-col items-center justify-center">
+<span class="data-label">Instrument</span>
+<strong class="text-3xl text-[#d4af37]" id="ticker-res"></strong>
+</div>
+<div class="glass-panel p-6 flex flex-col items-center justify-center">
+<span class="data-label">Market Price</span>
+<span class="text-3xl font-bold" id="price-res"></span>
+</div>
+<div class="glass-panel p-6 flex flex-col items-center justify-center">
+<span class="data-label">RSI Indicator (14)</span>
+<span class="text-3xl font-bold" id="rsi-res"></span>
+</div>
+</div>
+<!-- Recommendation & Timestamp -->
+<div class="space-y-4">
+<div class="glass-panel p-8 flex items-center justify-center gap-4 border-l-4" id="recommendation-box">
+<div class="text-3xl" id="icon-res"></div>
+<div class="recommendation font-serif text-2xl tracking-wide" id="rec-text-res"></div>
+</div>
+<div class="text-center">
+<span class="data-label">Data Extraction Timestamp: </span>
+<span class="text-xs font-bold text-[#d4af37]" id="cache-timestamp"></span>
+</div>
+</div>
+<!-- Visualization -->
+<div class="glass-panel p-4 overflow-hidden" id="chart-container">
+<img alt="Stock Analysis Chart" class="w-full rounded-sm hidden shadow-2xl" id="stock-chart-img" src=""/>
+</div>
+<!-- Insights -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<div class="space-y-8">
+<!-- Fundamental Grid -->
+<div class="glass-panel p-8 fundamental-section">
+<h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+<span class="w-8 h-[1px] bg-[#d4af37]"></span> Financial Core Metrics
+                        </h3>
+<div class="grid grid-cols-2 gap-6 fundamental-grid">
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Net Profit Margin</div>
+<div class="value text-lg" id="net-profit-margin">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Operating Margin</div>
+<div class="value text-lg" id="operating-margin">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Free Cash Flow</div>
+<div class="value text-lg" id="free-cash-flow">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Operating Cash Flow</div>
+<div class="value text-lg" id="operating-cash-flow">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Payout Ratio</div>
+<div class="value text-lg" id="payout-ratio">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Debt to Equity</div>
+<div class="value text-lg" id="debt-to-equity">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Return on Assets</div>
+<div class="value text-lg" id="return-on-assets">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Return on Equity</div>
+<div class="value text-lg" id="return-on-equity">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Revenue Growth</div>
+<div class="value text-lg" id="revenue-growth">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">EPS Growth</div>
+<div class="value text-lg" id="eps-growth">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">Trailing P/E</div>
+<div class="value text-lg" id="trailing-pe">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">PEG Ratio</div>
+<div class="value text-lg" id="peg-ratio">-</div>
+</div>
+</div>
+</div>
+<!-- Lot Size Calculator -->
+<div class="glass-panel p-8 lot-size-calculator-section">
+<h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+<span class="w-8 h-[1px] bg-[#d4af37]"></span> Risk Management
+                        </h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center py-2 border-b border-white/5">
+<label class="data-label">Trading Capital</label>
+<input class="w-40 px-3 py-1 text-right rounded-sm text-sm" id="capital" type="number" value="100000000"/>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-white/5">
+<label class="data-label">Unit per Lot</label>
+<input class="w-40 px-3 py-1 text-right rounded-sm text-sm" id="lot-unit-size" type="number" value="100"/>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-white/5">
+<label class="data-label">Risk Exposure (%)</label>
+<input class="w-40 px-3 py-1 text-right rounded-sm text-sm" id="risk-percent" step="0.1" type="number" value="1"/>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-6">
+<div class="bg-black/20 p-4 rounded-sm">
+<div class="data-label">Price</div>
+<div class="font-bold text-lg" id="calc-current-price">-</div>
+</div>
+<div class="bg-black/20 p-4 rounded-sm">
+<div class="data-label">Stop Loss</div>
+<div class="font-bold text-lg text-[#f87171]" id="calc-sl">-</div>
+</div>
+</div>
+<button class="w-full btn-gold py-4 mt-4 rounded-sm" onclick="calculateLotSize()">Calculate Exposure</button>
+<div class="grid grid-cols-2 gap-4 mt-4">
+<div class="bg-[#d4af37]/10 p-4 rounded-sm border border-[#d4af37]/20">
+<div class="data-label">Optimal Lot Size</div>
+<div class="text-2xl font-bold text-[#d4af37]" id="result-lot-size">-</div>
+</div>
+<div class="bg-[#d4af37]/10 p-4 rounded-sm border border-[#d4af37]/20">
+<div class="data-label">Position Value</div>
+<div class="text-2xl font-bold text-[#d4af37]" id="result-money-size">-</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-8">
+<!-- Company Profile & News -->
+<div class="glass-panel p-8 hidden" id="company-description">
+<h3 class="text-[#d4af37] text-xl mb-4">Corporate Profile</h3>
+<div class="text-sm leading-relaxed text-[#eae1d4]/80 text-justify" id="company-description-text"></div>
+</div>
+<div class="glass-panel p-8 hidden" id="related-news">
+<h3 class="text-[#d4af37] text-xl mb-4">Market Intelligence</h3>
+<div class="space-y-3" id="news-container"></div>
+</div>
+<!-- Holders -->
+<div class="glass-panel p-8 holders-section hidden" id="major-holders-section">
+<h3 class="text-[#d4af37] text-xl mb-4">Ownership Structure</h3>
+<table class="holders-table w-full">
+<thead>
+<tr>
+<th class="text-left py-3">Stakeholder</th>
+<th class="text-left py-3">Equity</th>
+<th class="text-right py-3">Share</th>
+</tr>
+</thead>
+<tbody class="text-sm" id="major-holders-body"></tbody>
+</table>
+</div>
+<div class="glass-panel p-8 holders-section hidden" id="institutional-holders-section">
+<h3 class="text-[#d4af37] text-xl mb-4">Institutional Presence</h3>
+<table class="holders-table w-full">
+<thead>
+<tr>
+<th class="text-left py-3">Institution</th>
+<th class="text-left py-3">Equity</th>
+<th class="text-right py-3">Share</th>
+</tr>
+</thead>
+<tbody class="text-sm" id="institutional-holders-body"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<footer class="text-center py-8">
+<p class="text-[10px] text-[#99907c] tracking-wider uppercase opacity-60 max-w-2xl mx-auto mb-4 leading-relaxed">This application is experimental and used for personal use/educational only. Source data is Yahoo Finance (you should use yahoo ticker format to get your stock analysis) and public news media. Many rate limiter protections are implemented to protect data provider and server e.g 1 hour data syncronization gap. If you have any quetions, please reach satriyo.pranoto@gmail.com</p><p class="text-[10px] text-[#99907c] tracking-[0.4em] uppercase opacity-50">Private Wealth Management Interface v4.2.0</p>
+</footer>
+</div>
+<script>
+        const API_BASE_URL = "{{ api_base_url }}";
+        
+        async function refreshData() {
+            const ticker = document.getElementById('ticker').value.toUpperCase();
+            const statusDiv = document.getElementById('status');
+            const resultArea = document.getElementById('result-area');
+
+            if (!ticker) {
+                statusDiv.textContent = 'ENTER TICKER SYMBOL';
+                statusDiv.className = 'error';
+                return;
+            }
+
+            statusDiv.textContent = 'RE-INITIALIZING DATA STREAM...';
+            statusDiv.className = 'loading text-[#d4af37]';
+            resultArea.style.display = 'none';
+            document.getElementById('extraction-progress').classList.add('hidden');
+            document.getElementById('screener-results').classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ ticker: ticker, force_refresh: 'true' })
+                });
+
+                const rawText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (jsonError) {
+                    statusDiv.textContent = `CRITICAL FAILURE: ${rawText.substring(0, 50)}...`;
+                    statusDiv.className = 'error text-red-400';
+                    return;
+                }
+
+                if (data.status === 'error') {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'error text-red-400';
+                    return;
+                }
+
+                if (data.status === 'success') {
+                    statusDiv.textContent = 'STREAM RESTORED. CALCULATING...';
+                    await analyzeStock();
+                }
+            } catch (error) {
+                statusDiv.textContent = 'NETWORK TIMEOUT';
+                statusDiv.className = 'error text-red-400';
+            }
+        }
+
+        async function loadScreener(type) {
+            const statusDiv = document.getElementById('status');
+            const resultArea = document.getElementById('result-area');
+            const screenerResults = document.getElementById('screener-results');
+            const screenerTitle = document.getElementById('screener-title');
+
+            let endpoint = '/screener/most-active';
+            let titleText = 'ID Most Active Stocks';
+            
+            if (type === 'day-gainers') {
+                endpoint = '/screener/day-gainers';
+                titleText = 'ID Day Gainers';
+            } else if (type === 'net-net') {
+                endpoint = '/screener/net-net';
+                titleText = 'ID Net Net Strategy';
+            } else if (type === 'acquirers-multiple') {
+                endpoint = '/screener/acquirers-multiple';
+                titleText = 'ID The Acquirers Multiple';
+            } else if (type === 'us-most-active') {
+                endpoint = '/screener/us-most-active';
+                titleText = 'US Most Active Stocks';
+            } else if (type === 'us-day-gainers') {
+                endpoint = '/screener/us-day-gainers';
+                titleText = 'US Day Gainers';
+            } else if (type === 'us-net-net') {
+                endpoint = '/screener/us-net-net';
+                titleText = 'US Net Net Strategy';
+            } else if (type === 'us-acquirers-multiple') {
+                endpoint = '/screener/us-acquirers-multiple';
+                titleText = 'US The Acquirers Multiple';
+            } else if (type === 'us-bb-breakout') {
+                endpoint = '/screener/us-bb-breakout';
+                titleText = 'US BB Breakout Screener';
+            } else if (type === 'id-bb-breakout') {
+                endpoint = '/screener/id-bb-breakout';
+                titleText = 'ID BB Breakout Screener';
+            }
+
+            statusDiv.textContent = 'LOADING SCREENER DATA...';
+            statusDiv.className = 'loading text-[#d4af37]';
+            resultArea.classList.add('hidden');
+            screenerResults.classList.add('hidden');
+            document.getElementById('extraction-progress').classList.add('hidden');
+
+            const isBBBreakout = type === 'us-bb-breakout' || type === 'id-bb-breakout';
+
+            try {
+                let data = null;
+                
+                if (isBBBreakout) {
+                    const extractionProgress = document.getElementById('extraction-progress');
+                    const extractionTitle = document.getElementById('extraction-title');
+                    const extractionStatus = document.getElementById('extraction-status');
+                    const extractionCounter = document.getElementById('extraction-counter');
+                    const extractionBar = document.getElementById('extraction-bar');
+                    const extractionPercent = document.getElementById('extraction-percent');
+                    const extractionTicker = document.getElementById('extraction-ticker');
+                    
+                    extractionProgress.classList.remove('hidden');
+                    extractionTitle.textContent = titleText;
+                    extractionStatus.textContent = 'Starting...';
+                    extractionCounter.textContent = '0 / 0';
+                    extractionBar.style.width = '0%';
+                    if (extractionPercent) extractionPercent.textContent = '0%';
+                    extractionTicker.textContent = '';
+                    
+                    const eventSource = new EventSource(`${API_BASE_URL}/screener/bb-progress`);
+                    let screenerData = null;
+                    let hasCompleted = false;
+                    
+                    eventSource.onmessage = function(event) {
+                        try {
+                            const progress = JSON.parse(event.data);
+                            
+                            extractionStatus.textContent = progress.message || 'Processing...';
+                            extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
+                            extractionTicker.textContent = progress.current_ticker || '';
+                            
+                            if (progress.total > 0) {
+                                const percent = Math.round((progress.progress / progress.total) * 100);
+                                extractionBar.style.width = `${percent}%`;
+                                if (extractionPercent) extractionPercent.textContent = `${percent}%`;
+                            }
+                            
+                            if (progress.status === 'completed' || progress.status === 'error') {
+                                hasCompleted = true;
+                                statusDiv.textContent = `SCREENER COMPLETE: ${progress.results_count} stocks analyzed`;
+                                statusDiv.className = progress.status === 'completed' ? 'success text-[#4ade80]' : 'error text-red-400';
+                                extractionProgress.classList.add('hidden');
+                                if (eventSource) {
+                                    eventSource.close();
+                                }
+                                
+                                if (hasCompleted && screenerData && screenerData.data && screenerData.data.length > 0) {
+                                    renderScreenerResults(titleText, screenerData.data);
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error parsing progress:', e);
+                        }
+                    };
+                    
+                    eventSource.onerror = function() {
+                        statusDiv.textContent = 'CONNECTION LOST';
+                        statusDiv.className = 'error text-red-400';
+                        if (eventSource) {
+                            eventSource.close();
+                        }
+                    };
+                    
+                    statusDiv.textContent = 'RUNNING BB SCREENER...';
+                    statusDiv.className = 'loading text-[#d4af37]';
+                    
+                    try {
+                        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        
+                        screenerData = await response.json();
+                        
+                        if (screenerData.status === 'error') {
+                            if (response.status === 429) {
+                                statusDiv.textContent = 'RATE LIMIT: ' + screenerData.message;
+                            } else if (response.status === 409) {
+                                statusDiv.textContent = 'SCREENER ALREADY RUNNING';
+                            } else {
+                                statusDiv.textContent = 'ERROR: ' + screenerData.message;
+                            }
+                            statusDiv.className = 'error text-red-400';
+                            if (eventSource) {
+                                eventSource.close();
+                            }
+                            return;
+                        }
+                        
+                        if (screenerData.status === 'success' && screenerData.data && screenerData.data.length > 0) {
+                            renderScreenerResults(titleText, screenerData.data);
+                        }
+                    } catch (error) {
+                        statusDiv.textContent = 'SCREENER CONNECTION FAILED';
+                        statusDiv.className = 'error text-red-400';
+                        if (eventSource) {
+                            eventSource.close();
+                        }
+                    }
+                    
+                    return;
+                } else {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    data = await response.json();
+                }
+
+                if (data.status === 'error') {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'error text-red-400';
+                    return;
+                }
+
+                if (data.status === 'success') {
+                    statusDiv.textContent = `SCREENER COMPLETE: ${data.count} STOCKS`;
+                    statusDiv.className = 'success text-[#4ade80]';
+                    
+                    screenerTitle.textContent = titleText;
+                    
+                    const theadRow = document.querySelector('#screener-results thead tr');
+                    const hasRecommendation = data.data.length > 0 && 'recommendation' in data.data[0];
+                    
+                    if (hasRecommendation) {
+                        theadRow.innerHTML = `
+                            <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
+                            <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Date</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Value (M)</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Recommendation</th>
+                        `;
+                    } else {
+                        theadRow.innerHTML = `
+                            <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
+                            <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Name</th>
+                            <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">DateTime</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
+                            <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
+                        `;
+                    }
+                    
+                    const tbody = document.getElementById('screener-body');
+                    tbody.innerHTML = '';
+                    
+                    data.data.forEach(stock => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors';
+                        tr.onclick = () => {
+                            document.getElementById('ticker').value = stock.ticker;
+                            document.getElementById('screener-results').classList.add('hidden');
+                            document.getElementById('extraction-progress').classList.add('hidden');
+                            analyzeStock();
+                        };
+                        
+                        const changeClass = stock.change_pct >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]';
+                        const changeSign = stock.change_pct >= 0 ? '+' : '';
+                        
+                        let rowHtml = '';
+                        if (hasRecommendation) {
+                            const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
+                                           stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
+                            rowHtml = `
+                                <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
+                                <td class="py-3 text-xs text-[#99907c]">${stock.last_date || '-'}</td>
+                                <td class="py-3 text-right">${stock.price ? stock.price.toFixed(2) : '-'}</td>
+                                <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
+                                <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                                <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
+                            `;
+                        } else {
+                            rowHtml = `
+                                <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
+                                <td class="py-3">${stock.name || '-'}</td>
+                                <td class="py-3 text-xs text-[#99907c]">${stock.datetime || '-'}</td>
+                                <td class="py-3 text-right">${stock.price ? stock.price.toFixed(2) : '-'}</td>
+                                <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
+                            `;
+                        }
+                        
+                        tr.innerHTML = rowHtml;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    screenerResults.classList.remove('hidden');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'SCREENER CONNECTION FAILED';
+                statusDiv.className = 'error text-red-400';
+            }
+        }
+
+        let eventSource = null;
+
+        async function extractStockData(region) {
+            const statusDiv = document.getElementById('status');
+            const extractionProgress = document.getElementById('extraction-progress');
+            const extractionTitle = document.getElementById('extraction-title');
+            const extractionStatus = document.getElementById('extraction-status');
+            const extractionCounter = document.getElementById('extraction-counter');
+            const extractionBar = document.getElementById('extraction-bar');
+            const extractionPercent = document.getElementById('extraction-percent');
+            const extractionTicker = document.getElementById('extraction-ticker');
+            const extractionSuccess = document.getElementById('extraction-success');
+            const extractionFailed = document.getElementById('extraction-failed');
+            
+            const endpoint = region === 'us' ? '/extract/us' : '/extract/id';
+            const titleText = region === 'us' ? 'US Stocks Data Extraction' : 'ID Stocks Data Extraction';
+            
+            statusDiv.textContent = 'CHECKING RATE LIMIT...';
+            statusDiv.className = 'loading text-[#d4af37]';
+            
+            document.getElementById('result-area').classList.add('hidden');
+            document.getElementById('screener-results').classList.add('hidden');
+            extractionProgress.classList.remove('hidden');
+            extractionTitle.textContent = titleText;
+            extractionStatus.textContent = 'Initializing...';
+            extractionCounter.textContent = '0 / 0';
+            extractionBar.style.width = '0%';
+            extractionTicker.textContent = '';
+            extractionSuccess.textContent = '0';
+            extractionFailed.textContent = '0';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    if (response.status === 429) {
+                        statusDiv.textContent = 'RATE LIMIT: ' + data.message;
+                    } else if (response.status === 409) {
+                        statusDiv.textContent = 'EXTRACTION ALREADY RUNNING';
+                    } else {
+                        statusDiv.textContent = 'EXTRACTION ERROR: ' + data.message;
+                    }
+                    statusDiv.className = 'error text-red-400';
+                    return;
+                }
+                
+                statusDiv.textContent = 'EXTRACTION IN PROGRESS...';
+                statusDiv.className = 'loading text-[#d4af37]';
+                
+                eventSource = new EventSource(`${API_BASE_URL}/extract/progress`);
+                
+                eventSource.onmessage = function(event) {
+                    try {
+                        const progress = JSON.parse(event.data);
+                        
+                        extractionStatus.textContent = progress.message || 'Processing...';
+                        extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
+                        extractionTicker.textContent = progress.current_ticker || '';
+                        extractionSuccess.textContent = progress.success_count || 0;
+                        extractionFailed.textContent = progress.failed_count || 0;
+                        
+                        if (progress.total > 0) {
+                            const percent = Math.round((progress.progress / progress.total) * 100);
+                            extractionBar.style.width = `${percent}%`;
+                            extractionPercent.textContent = `${percent}%`;
+                        }
+                        
+                        if (progress.status === 'completed') {
+                            statusDiv.textContent = `EXTRACTION COMPLETE: ${progress.success_count} success, ${progress.failed_count} failed`;
+                            statusDiv.className = 'success text-[#4ade80]';
+                            extractionStatus.textContent = 'Completed';
+                            if (eventSource) {
+                                eventSource.close();
+                                eventSource = null;
+                            }
+                        } else if (progress.status === 'error') {
+                            statusDiv.textContent = 'EXTRACTION FAILED';
+                            statusDiv.className = 'error text-red-400';
+                            if (eventSource) {
+                                eventSource.close();
+                                eventSource = null;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing progress:', e);
+                    }
+                };
+                
+                eventSource.onerror = function() {
+                    statusDiv.textContent = 'CONNECTION LOST';
+                    statusDiv.className = 'error text-red-400';
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                };
+                
+            } catch (error) {
+                statusDiv.textContent = 'EXTRACTION FAILED';
+                statusDiv.className = 'error text-red-400';
+            }
+        }
+
+        async function analyzeStock() {
+            const ticker = document.getElementById('ticker').value.toUpperCase();
+            const statusDiv = document.getElementById('status');
+            const resultArea = document.getElementById('result-area');
+
+            statusDiv.textContent = 'EXECUTING ANALYTIC PROTOCOLS...';
+            statusDiv.className = 'loading text-[#d4af37]';
+            resultArea.classList.add('hidden');
+            document.getElementById('screener-results').classList.add('hidden');
+            document.getElementById('extraction-progress').classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ ticker: ticker })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'error text-red-400';
+                    return;
+                }
+
+                if (data.status === 'success') {
+                    statusDiv.textContent = 'ANALYSIS COMPLETE';
+                    statusDiv.className = 'success text-[#4ade80]';
+                    
+                    document.getElementById('ticker-res').textContent = data.ticker;
+                    document.getElementById('price-res').textContent = `$${data.last_price.toFixed(2)}`;
+                    document.getElementById('rsi-res').textContent = data.rsi.toFixed(2);
+                    
+                    if (data.cache_timestamp) {
+                        const cacheDate = new Date(data.cache_timestamp);
+                        document.getElementById('cache-timestamp').textContent = cacheDate.toLocaleString('en-US', {
+                            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        }).toUpperCase();
+                    }
+
+                    document.getElementById('calc-current-price').textContent = data.last_price;
+                    document.getElementById('calc-sl').textContent = data.last_sl.toFixed(2);
+                    
+                    const recBox = document.getElementById('recommendation-box');
+                    const iconRes = document.getElementById('icon-res');
+                    const recText = document.getElementById('rec-text-res');
+
+                    if (data.recommendation.includes('BUY')) {
+                        recBox.style.borderLeftColor = '#4ade80';
+                        iconRes.textContent = '◆';
+                        recText.textContent = 'STRATEGIC DIRECTIVE: BUY / ACCUMULATE';
+                        recText.style.color = '#4ade80';
+                    } else {
+                        recBox.style.borderLeftColor = '#f87171';
+                        iconRes.textContent = '◇';
+                        recText.textContent = 'STRATEGIC DIRECTIVE: HOLD / PROTECT';
+                        recText.style.color = '#f87171';
+                    }
+
+                    if (data.fundamental) {
+                        const companyDescDiv = document.getElementById('company-description');
+                        const companyDescText = document.getElementById('company-description-text');
+                        if (data.fundamental.company_description) {
+                            companyDescText.textContent = data.fundamental.company_description;
+                            companyDescDiv.classList.remove('hidden');
+                        } else {
+                            companyDescDiv.classList.add('hidden');
+                        }
+                        
+                        const newsDiv = document.getElementById('related-news');
+                        const newsContainer = document.getElementById('news-container');
+                        if (data.news && data.news.length > 0) {
+                            newsContainer.innerHTML = '';
+                            data.news.forEach(newsItem => {
+                                const newsLink = document.createElement('a');
+                                newsLink.href = newsItem.link;
+                                newsLink.target = '_blank';
+                                newsLink.className = 'block p-3 bg-white/5 hover:bg-white/10 rounded-sm transition-colors border-l border-[#d4af37]/30';
+                                
+                                const newsTitle = document.createElement('div');
+                                newsTitle.textContent = newsItem.title;
+                                newsTitle.className = 'text-xs font-semibold text-[#eae1d4] uppercase tracking-wide';
+                                
+                                newsLink.appendChild(newsTitle);
+                                newsContainer.appendChild(newsLink);
+                            });
+                            newsDiv.classList.remove('hidden');
+                        } else {
+                            newsDiv.classList.add('hidden');
+                        }
+                        
+                        setFundamentalValue('net-profit-margin', data.fundamental.net_profit_margin, true);
+                        setFundamentalValue('operating-margin', data.fundamental.operating_margin, true);
+                        setFundamentalValue('free-cash-flow', data.fundamental.free_cash_flow, false);
+                        setFundamentalValue('operating-cash-flow', data.fundamental.operating_cash_flow, false);
+                        setFundamentalValue('payout-ratio', data.fundamental.payout_ratio, true);
+                        setFundamentalValue('debt-to-equity', data.fundamental.long_term_debt_to_equity, true);
+                        setFundamentalValue('return-on-assets', data.fundamental.return_on_assets, true);
+                        setFundamentalValue('return-on-equity', data.fundamental.return_on_equity, true);
+                        setFundamentalValue('revenue-growth', data.fundamental.revenue_growth, true);
+                        setFundamentalValue('eps-growth', data.fundamental.eps_growth, true);
+                        setFundamentalValue('trailing-pe', data.fundamental.trailing_pe, false);
+                        setFundamentalValue('peg-ratio', data.fundamental.peg_ratio, false);
+                        
+                        displayHolders('major-holders', data.fundamental.major_holders);
+                        displayHolders('institutional-holders', data.fundamental.institutional_holders);
+                    }
+
+                    resultArea.classList.remove('hidden');
+                    renderChart(data.chart_image);
+                    calculateLotSize();
+                } else {
+                    statusDiv.textContent = 'EXECUTION FAILURE';
+                    statusDiv.className = 'error text-red-400';
+                }
+            } catch (error) {
+                statusDiv.textContent = 'CONNECTION ABORTED';
+                statusDiv.className = 'error text-red-400';
+            }
+        }
+
+        function calculateLotSize() {
+            const capital = parseFloat(document.getElementById('capital').value);
+            const lotUnitSize = parseFloat(document.getElementById('lot-unit-size').value);
+            const riskPercent = parseFloat(document.getElementById('risk-percent').value);
+            const currentPrice = parseFloat(document.getElementById('calc-current-price').textContent);
+            const sl = parseFloat(document.getElementById('calc-sl').textContent);
+            const resultLotSizeDiv = document.getElementById('result-lot-size');
+            const resultMoneySizeDiv = document.getElementById('result-money-size');
+
+            if (isNaN(capital) || isNaN(lotUnitSize) || isNaN(riskPercent) || isNaN(currentPrice) || isNaN(sl)) {
+                resultLotSizeDiv.textContent = 'ERROR';
+                return;
+            }
+
+            if (currentPrice === sl) {
+                resultLotSizeDiv.textContent = 'SL PARITY';
+                return;
+            }
+
+            const riskAmount = (capital * riskPercent) / 100;
+            const priceDifference = currentPrice - sl;
+            
+            if (priceDifference === 0 || lotUnitSize === 0) return;
+            
+            const calculatedLotSize = riskAmount / (Math.abs(priceDifference) * lotUnitSize);
+            const calculatedMoneySize = calculatedLotSize * currentPrice * lotUnitSize;
+
+            resultLotSizeDiv.textContent = calculatedLotSize.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            resultMoneySizeDiv.textContent = Math.floor(calculatedMoneySize).toLocaleString();
+        }
+
+        function renderChart(base64Image) {
+            const imgTag = document.getElementById('stock-chart-img');
+            imgTag.src = "data:image/png;base64," + base64Image;
+            imgTag.classList.remove('hidden');
+        }
+
+        function setFundamentalValue(elementId, value, isPercentage) {
+            const element = document.getElementById(elementId);
+            if (value === null || value === undefined || isNaN(value)) {
+                element.textContent = 'N/A';
+                element.classList.remove('positive', 'negative');
+            } else {
+                if (isPercentage) {
+                    const percentValue = (value).toFixed(2);
+                    element.textContent = `${percentValue}%`;
+                    element.className = 'value ' + (value >= 0 ? 'positive' : 'negative');
+                } else {
+                    if (Math.abs(value) >= 1e9) {
+                        element.textContent = `$${(value / 1e9).toFixed(2)}B`;
+                    } else if (Math.abs(value) >= 1e6) {
+                        element.textContent = `$${(value / 1e6).toFixed(2)}M`;
+                    } else if (Math.abs(value) >= 1e3) {
+                        element.textContent = `$${(value / 1e3).toFixed(2)}K`;
+                    } else {
+                        element.textContent = value.toFixed(2);
+                    }
+                    element.className = 'value';
+                }
+            }
+        }
+        
+        function displayHolders(type, holders) {
+            const sectionId = type === 'major-holders' ? 'major-holders-section' : 'institutional-holders-section';
+            const tbodyId = type === 'major-holders' ? 'major-holders-body' : 'institutional-holders-body';
+            
+            const section = document.getElementById(sectionId);
+            const tbody = document.getElementById(tbodyId);
+            
+            if (!holders || holders.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            holders.forEach(holder => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 pr-4 text-[#eae1d4] font-medium">${holder.holder || '-'}</td>
+                    <td class="py-3 tabular-nums text-[#99907c]">${holder.shares || '-'}</td>
+                    <td class="py-3 text-right font-bold text-[#d4af37]">${holder.percentage || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            section.classList.remove('hidden');
+        }
+        
+        function renderScreenerResults(titleText, data) {
+            const screenerResults = document.getElementById('screener-results');
+            const screenerTitle = document.getElementById('screener-title');
+            const theadRow = document.querySelector('#screener-results thead tr');
+            const tbody = document.getElementById('screener-body');
+            
+            screenerTitle.textContent = titleText;
+            tbody.innerHTML = '';
+            
+            const hasRecommendation = data.length > 0 && 'recommendation' in data[0];
+            
+            if (hasRecommendation) {
+                theadRow.innerHTML = `
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Date</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Value (M)</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Recommendation</th>
+                `;
+            } else {
+                theadRow.innerHTML = `
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Name</th>
+                    <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">DateTime</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
+                `;
+            }
+            
+            data.forEach(stock => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors';
+                tr.onclick = () => {
+                    document.getElementById('ticker').value = stock.ticker;
+                    document.getElementById('screener-results').classList.add('hidden');
+                    document.getElementById('extraction-progress').classList.add('hidden');
+                    analyzeStock();
+                };
+                
+                const changeClass = stock.change_pct >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]';
+                const changeSign = stock.change_pct >= 0 ? '+' : '';
+                
+                let rowHtml = '';
+                if (hasRecommendation) {
+                    const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
+                                   stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
+                    rowHtml = `
+                        <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
+                        <td class="py-3 text-xs text-[#99907c]">${stock.last_date || '-'}</td>
+                        <td class="py-3 text-right">${stock.price ? stock.price.toFixed(2) : '-'}</td>
+                        <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
+                        <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                        <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
+                    `;
+                } else {
+                    rowHtml = `
+                        <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
+                        <td class="py-3">${stock.name || '-'}</td>
+                        <td class="py-3 text-xs text-[#99907c]">${stock.datetime || '-'}</td>
+                        <td class="py-3 text-right">${stock.price ? stock.price.toFixed(2) : '-'}</td>
+                        <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
+                    `;
+                }
+                
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+            
+            screenerResults.classList.remove('hidden');
+        }
+    </script>
+</body></html>

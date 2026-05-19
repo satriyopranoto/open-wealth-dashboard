@@ -1,0 +1,105 @@
+# Open Wealth Dashboard
+
+Open-source stock analysis engine for US and Indonesian (IDX) markets. Built with Flask + vanilla JS, data sourced entirely from Yahoo Finance.
+
+## Features
+
+- **Stock Analyzer** — RSI (14), Donchian Channel Stop Loss, candlestick chart, BUY/HOLD/SELL recommendation
+- **Fundamental Screeners** — Most Active, Day Gainers, Net Net Strategy, Acquirers Multiple (both US & ID)
+- **Technical Screener** — Bollinger Band Breakout screener against a local watchlist
+- **Risk Management** — Client-side lot size calculator based on capital, risk %, and stop loss
+- **Fundamental Data** — 12 core metrics, company profile, ownership structure (major + institutional holders)
+- **Market Intelligence** — Top 10 news from Google News (Indonesian + English)
+
+## Quick Start
+
+```bash
+# 1. Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate        # Linux/macOS
+# venv\Scripts\activate         # Windows
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Configure environment
+cp .env.example .env            # or create .env manually (see below)
+
+# 4. Run
+python app.py
+# → http://localhost:5000
+```
+
+**.env** file:
+```
+FLASK_APP=app.py
+FLASK_ENV=development
+API_BASE_URL=http://127.0.0.1:5000
+FLASK_PORT=5000
+```
+
+## Ticker Format
+
+| Market | Format | Example |
+|--------|--------|---------|
+| US | Standard | `AAPL`, `TSLA` |
+| Indonesia (IDX) | Append `.JK` | `BRMS.JK`, `BBCA.JK` |
+
+## Screener Watchlists
+
+The BB Breakout screener and Data Synchronization features require watchlist files in the project root:
+
+- `uslist.csv` — US tickers, must have a `Symbol` column
+- `idlist.csv` — Indonesian tickers (with `.JK` suffix), must have a `Symbol` column
+
+## Architecture
+
+Single-file Flask backend ([app.py](app.py)) + single-page HTML frontend ([templates/index.html](templates/index.html)). No database — all persistence is file-based in `cache/`.
+
+### Backend routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | GET | Serve the SPA |
+| `/analyze` | POST | Full stock analysis (cached) |
+| `/refresh` | POST | Force re-download + re-analyze |
+| `/screener/most-active` | GET | ID most active stocks |
+| `/screener/day-gainers` | GET | ID day gainers |
+| `/screener/net-net` | GET | ID net net strategy |
+| `/screener/acquirers-multiple` | GET | ID acquirers multiple |
+| `/screener/us-*` | GET | Same screeners for US market |
+| `/screener/id-bb-breakout` | POST | ID BB breakout (scans idlist.csv) |
+| `/screener/us-bb-breakout` | POST | US BB breakout (scans uslist.csv) |
+| `/screener/bb-progress` | GET | SSE stream for BB screener progress |
+| `/extract/id` | POST | Background bulk download for idlist.csv |
+| `/extract/us` | POST | Background bulk download for uslist.csv |
+| `/extract/progress` | GET | SSE stream for extraction progress |
+| `/extract/status` | GET | Current extraction status + rate limit check |
+
+### Cache structure (`cache/`)
+
+| File | TTL | Contents |
+|------|-----|----------|
+| `[TICKER].csv` | 1 hour | OHLCV data; line 1 is `# {JSON metadata}` |
+| `[TICKER]_fundamental.json` | 24 hours | Fundamental metrics + holders |
+| `[TICKER]_news.json` | 1 hour | Top 10 news items |
+| `screener_[name].csv` | 1 hour | Screener results; same `#` metadata format |
+
+### Technical indicator logic
+
+- **RSI** — EWM-based (equivalent to Wilder's smoothing), period 14
+- **Stop Loss** — Donchian Channel port from Pine Script: `ero = atr_multiple(2.8) × atr_period(10) = 28`; trend direction via `valuewhen`-style `ffill`; `SL = lowest_low(28)` in uptrend, `highest_high(28)` in downtrend
+- **Bollinger Bands** — SMA(20) ± 2σ, used in BB Breakout screener
+
+### Rate limiting
+
+- Data synchronization (bulk extraction) enforces a 60-minute cooldown per watchlist, checked against the cache mtime of the first ticker in the list.
+- BB Breakout screener runs synchronously per request; concurrent requests are rejected with HTTP 409.
+
+## Deployment
+
+For network/production deployments, update `API_BASE_URL` in `.env` to the server's public address. See `CONFIG.md` for detailed scenarios.
+
+---
+
+> **Disclaimer:** This application is for personal/educational use only. Data source: Yahoo Finance. Rate limiter protections are in place to respect the data provider. Contact: satriyo.pranoto@gmail.com
