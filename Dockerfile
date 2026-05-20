@@ -17,6 +17,7 @@ RUN python -c 'import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplo
 
 # Copy source code
 COPY app.py downloader.py ./
+COPY uslist.csv idlist.csv ./
 COPY templates/ templates/
 
 # Cache dir; akan di-override oleh bind-mount saat docker compose up

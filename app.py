@@ -163,36 +163,48 @@ def save_screener_to_cache(screener_name, data):
 
 def check_rate_limit_for_list(list_path):
     """
-    Memeriksa apakah file pertama di watchlist (CSV) sudah di-update kurang dari RATE_LIMIT_MINUTES menit lalu.
+    Memeriksa apakah ekstraksi sudah dilakukan kurang dari RATE_LIMIT_MINUTES menit lalu.
+    Menggunakan marker file dalam cache directory untuk tracking.
     Returns: (is_safe, minutes_left, message)
     """
     if not os.path.exists(list_path):
         return True, 0, ""
     
     try:
-        tickers_df = pd.read_csv(list_path)
-        if 'Symbol' not in tickers_df.columns:
-            return True, 0, ""
+        # Tentukan nama marker berdasarkan nama file list (uslist atau idlist)
+        list_name = os.path.basename(list_path).replace('.csv', '')  # e.g., 'uslist' or 'idlist'
+        marker_file = os.path.join(CACHE_DIR, f".extraction_{list_name}_marker.txt")
         
-        first_ticker = tickers_df['Symbol'].iloc[0].strip().upper()
-        cache_file = os.path.join(CACHE_DIR, f"{first_ticker}.csv")
-        
-        if not os.path.exists(cache_file):
+        # Jika marker file tidak ada, extraction belum pernah dijalankan
+        if not os.path.exists(marker_file):
             return True, 0, ""
         
         current_time = time.time()
-        last_modified = os.path.getmtime(cache_file)
+        last_modified = os.path.getmtime(marker_file)
         diff_minutes = (current_time - last_modified) / 60
         
         if diff_minutes < RATE_LIMIT_MINUTES:
             minutes_left = int(RATE_LIMIT_MINUTES - diff_minutes)
-            return False, minutes_left, f"File {first_ticker} baru saja diextract. Harap tunggu sekitar {minutes_left} menit lagi."
+            return False, minutes_left, f"Extraction untuk {list_name} baru saja dijalankan. Harap tunggu sekitar {minutes_left} menit lagi."
         
         return True, 0, ""
         
     except Exception as e:
         print(f"Error checking rate limit: {e}")
         return True, 0, ""
+
+def create_extraction_marker(list_path):
+    """
+    Membuat marker file untuk tracking waktu ekstraksi terakhir.
+    """
+    try:
+        list_name = os.path.basename(list_path).replace('.csv', '')
+        marker_file = os.path.join(CACHE_DIR, f".extraction_{list_name}_marker.txt")
+        with open(marker_file, 'w') as f:
+            f.write(f"Last extraction: {datetime.now().isoformat()}\n")
+        print(f"[RATE_LIMIT] Created marker file: {marker_file}", flush=True)
+    except Exception as e:
+        print(f"Error creating extraction marker: {e}")
 
 def load_cached_fundamental(ticker):
     """
@@ -1508,13 +1520,18 @@ def extract_us_stocks():
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     is_safe, minutes_left, message = check_rate_limit_for_list(uslist_path)
+    print(f"[EXTRACT/US] Rate limit check - safe={is_safe}, message={message}", flush=True)
+    
     if not is_safe:
+        print(f"[EXTRACT/US] Rate limit blocking extraction", flush=True)
         return jsonify({"status": "error", "message": message}), 429
     
     if extraction_progress['is_running']:
+        print(f"[EXTRACT/US] Extraction already running", flush=True)
         return jsonify({"status": "error", "message": "Extraction sedang berjalan"}), 409
     
     if not os.path.exists(uslist_path):
+        print(f"[EXTRACT/US] File not found: {uslist_path}", flush=True)
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
@@ -1523,6 +1540,7 @@ def extract_us_stocks():
             return jsonify({"status": "error", "message": "Kolom 'Symbol' tidak ditemukan di uslist.csv"}), 400
         
         tickers = tickers_df['Symbol'].tolist()
+        print(f"[EXTRACT/US] Loaded {len(tickers)} tickers from uslist.csv", flush=True)
         
         def run_us_extraction():
             global extraction_progress
@@ -1534,11 +1552,16 @@ def extract_us_stocks():
             extraction_progress['status'] = 'running'
             extraction_progress['message'] = f'Starting US stocks extraction ({len(tickers)} tickers)...'
             
+            print(f"[EXTRACTION] Starting US extraction thread for {len(tickers)} tickers", flush=True)
+            
             for i, ticker in enumerate(tickers):
                 ticker = ticker.strip().upper()
                 extraction_progress['current_ticker'] = ticker
                 extraction_progress['progress'] = i + 1
                 extraction_progress['message'] = f'Downloading {ticker}...'
+                
+                if (i + 1) % 10 == 0 or i == 0:
+                    print(f"[EXTRACTION US] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
                 
                 try:
                     data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
@@ -1547,7 +1570,7 @@ def extract_us_stocks():
                     else:
                         extraction_progress['success_count'] += 1
                 except Exception as e:
-                    print(f"Error downloading {ticker}: {e}")
+                    print(f"[EXTRACTION US] Error downloading {ticker}: {e}", flush=True)
                     extraction_progress['failed_count'] += 1
                 
                 time.sleep(1)
@@ -1555,9 +1578,15 @@ def extract_us_stocks():
             extraction_progress['status'] = 'completed'
             extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
             extraction_progress['is_running'] = False
+            print(f"[EXTRACTION] US extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
+            
+            # Create rate limit marker for next extraction
+            create_extraction_marker(uslist_path)
         
-        thread = threading.Thread(target=run_us_extraction)
+        thread = threading.Thread(target=run_us_extraction, daemon=False)
+        print(f"[EXTRACT/US] Creating extraction thread", flush=True)
         thread.start()
+        print(f"[EXTRACT/US] Thread started successfully", flush=True)
         
         return jsonify({
             "status": "success",
@@ -1587,13 +1616,18 @@ def extract_id_stocks():
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     is_safe, minutes_left, message = check_rate_limit_for_list(idlist_path)
+    print(f"[EXTRACT/ID] Rate limit check - safe={is_safe}, message={message}", flush=True)
+    
     if not is_safe:
+        print(f"[EXTRACT/ID] Rate limit blocking extraction", flush=True)
         return jsonify({"status": "error", "message": message}), 429
     
     if extraction_progress['is_running']:
+        print(f"[EXTRACT/ID] Extraction already running", flush=True)
         return jsonify({"status": "error", "message": "Extraction sedang berjalan"}), 409
     
     if not os.path.exists(idlist_path):
+        print(f"[EXTRACT/ID] File not found: {idlist_path}", flush=True)
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
@@ -1602,6 +1636,7 @@ def extract_id_stocks():
             return jsonify({"status": "error", "message": "Kolom 'Symbol' tidak ditemukan di idlist.csv"}), 400
         
         tickers = tickers_df['Symbol'].tolist()
+        print(f"[EXTRACT/ID] Loaded {len(tickers)} tickers from idlist.csv", flush=True)
         
         def run_id_extraction():
             global extraction_progress
@@ -1613,11 +1648,16 @@ def extract_id_stocks():
             extraction_progress['status'] = 'running'
             extraction_progress['message'] = f'Starting ID stocks extraction ({len(tickers)} tickers)...'
             
+            print(f"[EXTRACTION] Starting ID extraction thread for {len(tickers)} tickers", flush=True)
+            
             for i, ticker in enumerate(tickers):
                 ticker = ticker.strip().upper()
                 extraction_progress['current_ticker'] = ticker
                 extraction_progress['progress'] = i + 1
                 extraction_progress['message'] = f'Downloading {ticker}...'
+                
+                if (i + 1) % 10 == 0 or i == 0:
+                    print(f"[EXTRACTION ID] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
                 
                 try:
                     data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
@@ -1626,7 +1666,7 @@ def extract_id_stocks():
                     else:
                         extraction_progress['success_count'] += 1
                 except Exception as e:
-                    print(f"Error downloading {ticker}: {e}")
+                    print(f"[EXTRACTION ID] Error downloading {ticker}: {e}", flush=True)
                     extraction_progress['failed_count'] += 1
                 
                 time.sleep(1)
@@ -1634,9 +1674,15 @@ def extract_id_stocks():
             extraction_progress['status'] = 'completed'
             extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
             extraction_progress['is_running'] = False
+            print(f"[EXTRACTION] ID extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
+            
+            # Create rate limit marker for next extraction
+            create_extraction_marker(idlist_path)
         
-        thread = threading.Thread(target=run_id_extraction)
+        thread = threading.Thread(target=run_id_extraction, daemon=False)
+        print(f"[EXTRACT/ID] Creating extraction thread", flush=True)
         thread.start()
+        print(f"[EXTRACT/ID] Thread started successfully", flush=True)
         
         return jsonify({
             "status": "success",
