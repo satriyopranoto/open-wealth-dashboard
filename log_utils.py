@@ -21,6 +21,27 @@ def _get_log_path():
     return LOG_DIR / LOG_FILE_PATTERN.format(date=date_str)
 
 
+def _get_log_path_for_date(date_str):
+    """Mendapatkan path file log untuk tanggal tertentu."""
+    LOG_DIR.mkdir(exist_ok=True)
+    return LOG_DIR / LOG_FILE_PATTERN.format(date=date_str)
+
+
+def list_available_dates():
+    """Mengembalikan daftar tanggal yang memiliki file log."""
+    LOG_DIR.mkdir(exist_ok=True)
+    dates = []
+    for f in sorted(LOG_DIR.glob("usage-*.log"), reverse=True):
+        # Extract date from filename: usage-YYYY-MM-DD.log
+        date_str = f.stem.replace("usage-", "")
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")  # validate
+            dates.append(date_str)
+        except ValueError:
+            continue
+    return dates
+
+
 def _get_client_ip():
     """Mendapatkan IP asli client dari Flask request.
     Handle X-Forwarded-For untuk reverse proxy / load balancer."""
@@ -79,9 +100,18 @@ def log_action(feature, action, params=None, status="success", duration_ms=None,
         logger.error("Failed to write log entry: %s", e)
 
 
-def read_recent_logs(limit=50):
-    """Membaca log terbaru dari file log hari ini."""
-    log_path = _get_log_path()
+def read_recent_logs(limit=50, date=None):
+    """
+    Membaca log terbaru dari file log.
+
+    Args:
+        limit: Jumlah baris terakhir (default 50)
+        date: Tanggal dalam format YYYY-MM-DD (None = hari ini)
+    """
+    if date:
+        log_path = _get_log_path_for_date(date)
+    else:
+        log_path = _get_log_path()
     if not log_path.exists():
         return []
     try:

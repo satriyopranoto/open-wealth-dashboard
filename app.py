@@ -2194,6 +2194,35 @@ def screener_bb_progress():
     from flask import Response
     return Response(generate(), mimetype='text/event-stream')
 
+
+@app.route('/logs', methods=['GET'])
+def view_logs():
+    """Halaman untuk melihat log activity dengan filter tanggal dan limit."""
+    date_str = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    limit = request.args.get('limit', '20')
+
+    try:
+        limit = int(limit)
+        if limit < 1:
+            limit = 20
+        if limit > 500:
+            limit = 500
+    except ValueError:
+        limit = 20
+
+    try:
+        entries = read_recent_logs(limit=limit, date=date_str)
+        success_count = sum(1 for e in entries if e.get('status') == 'success')
+        error_count = sum(1 for e in entries if e.get('status') == 'error')
+        return render_template('logs.html', entries=entries, date=date_str,
+                              limit=limit, success_count=success_count,
+                              error_count=error_count, error=None)
+    except Exception as e:
+        return render_template('logs.html', entries=[], date=date_str,
+                              limit=limit, success_count=0, error_count=0,
+                              error=str(e))
+
+
 if __name__ == '__main__':
     # Debug=True penting untuk melihat log di terminal
     # threaded=True memastikan request datang bersamaan tidak menumpuk

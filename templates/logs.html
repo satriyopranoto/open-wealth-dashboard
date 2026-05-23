@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockTrade - Activity Logs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1117;
+            color: #e1e4e8;
+            padding: 24px;
+        }
+        h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #f0f6fc; }
+        .subtitle { color: #8b949e; margin-bottom: 24px; font-size: 14px; }
+        .controls {
+            display: flex; gap: 16px; align-items: end; margin-bottom: 24px; flex-wrap: wrap;
+        }
+        .controls label {
+            font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+            color: #8b949e; display: block; margin-bottom: 4px;
+        }
+        .controls input, .controls select {
+            background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+            padding: 8px 12px; color: #e1e4e8; font-size: 14px; min-width: 160px;
+        }
+        .controls input:focus, .controls select:focus { outline: none; border-color: #58a6ff; }
+        .controls button {
+            background: #238636; border: none; border-radius: 6px; padding: 8px 20px;
+            color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s;
+        }
+        .controls button:hover { background: #2ea043; }
+        .summary { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .summary-item {
+            background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+            padding: 12px 20px; text-align: center;
+        }
+        .summary-item .value { font-size: 22px; font-weight: 700; color: #f0f6fc; }
+        .summary-item .label {
+            font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: .5px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            background: #161b22; border-bottom: 2px solid #30363d; padding: 10px 12px;
+            text-align: left; font-weight: 600; color: #8b949e; font-size: 11px;
+            text-transform: uppercase; letter-spacing: .5px; position: sticky; top: 0; z-index: 1;
+        }
+        tbody tr { border-bottom: 1px solid #21262d; transition: background .15s; }
+        tbody tr:hover { background: #161b22; }
+        tbody td {
+            padding: 10px 12px; vertical-align: top;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size: 12px;
+        }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #1b3a2d; color: #7ee787; }
+        .badge-error   { background: #3d1f1f; color: #ff7b72; }
+        .param-key { color: #79c0ff; font-weight: 500; }
+        .param-val { color: #a5d6ff; }
+        .params-list { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+        .params-list li { display: inline; }
+        .empty-state { text-align: center; padding: 64px 24px; color: #8b949e; }
+        .empty-state h2 { font-size: 20px; margin-bottom: 8px; color: #e1e4e8; }
+        .empty-state p { font-size: 14px; }
+        .error-state {
+            background: #3d1f1f; border: 1px solid #f85149; border-radius: 8px;
+            padding: 16px; color: #ff7b72; margin-bottom: 16px;
+        }
+        .timestamp { color: #8b949e; white-space: nowrap; }
+        .feature-cell { font-weight: 600; color: #f0f6fc; }
+        .ip-cell { color: #8b949e; font-size: 11px; }
+        .detail-cell { color: #d2a8ff; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .duration-cell { color: #8b949e; text-align: right; white-space: nowrap; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .controls { flex-direction: column; align-items: stretch; }
+            table { font-size: 11px; }
+            thead th, tbody td { padding: 6px 8px; }
+            .params-list { gap: 2px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Activity Logs</h1>
+    <p class="subtitle">StockTrade -- feature usage tracking</p>
+
+    <form class="controls" method="GET" action="/logs">
+        <div>
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" value="{{ date }}">
+        </div>
+        <div>
+            <label for="limit">Limit (last N entries)</label>
+            <input type="number" id="limit" name="limit" value="{{ limit }}" min="1" max="500">
+        </div>
+        <div>
+            <button type="submit">View</button>
+        </div>
+    </form>
+
+    {% if error %}
+    <div class="error-state">Error: {{ error }}</div>
+    {% endif %}
+
+    <div class="summary">
+        <div class="summary-item">
+            <div class="value">{{ entries|length }}</div>
+            <div class="label">Entries</div>
+        </div>
+        <div class="summary-item">
+            <div class="value">{{ success_count }}</div>
+            <div class="label">Success</div>
+        </div>
+        <div class="summary-item">
+            <div class="value">{{ error_count }}</div>
+            <div class="label">Errors</div>
+        </div>
+    </div>
+
+    {% if entries %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th>Feature</th>
+                    <th>Action</th>
+                    <th>Params</th>
+                    <th>Duration</th>
+                    <th>IP</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td class="timestamp">{{ entry.timestamp[11:19] }}</td>
+                    <td>
+                        {% if entry.status == 'success' %}
+                            <span class="badge badge-success">ok</span>
+                        {% elif entry.status == 'error' %}
+                            <span class="badge badge-error">err</span>
+                        {% else %}
+                            <span class="badge badge-info">{{ entry.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="feature-cell">{{ entry.feature }}</td>
+                    <td>{{ entry.action }}</td>
+                    <td>
+                        {% if entry.params %}
+                        <ul class="params-list">
+                            {% for k, v in entry.params.items() %}
+                            <li><span class="param-key">{{ k }}</span>=<span class="param-val">{{ v }}</span></li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <span style="color:#484f58;">--</span>
+                        {% endif %}
+                    </td>
+                    <td class="duration-cell">
+                        {% if entry.duration_ms is defined and entry.duration_ms is not none %}
+                            {% if entry.duration_ms < 1000 %}
+                                {{ "%.0f"|format(entry.duration_ms) }}ms
+                            {% else %}
+                                {{ "%.2f"|format(entry.duration_ms / 1000) }}s
+                            {% endif %}
+                        {% else %}
+                            <span style="color:#484f58;">--</span>
+                        {% endif %}
+                    </td>
+                    <td class="ip-cell">
+                        {% if entry.ip and entry.ip != 'unknown' %}
+                            {{ entry.ip }}
+                        {% else %}
+                            <span style="color:#484f58;">--</span>
+                        {% endif %}
+                    </td>
+                    <td class="detail-cell" title="{{ entry.detail or '' }}">
+                        {% if entry.detail %}
+                            {{ entry.detail[:80] }}{% if entry.detail|length > 80 %}...{% endif %}
+                        {% else %}
+                            <span style="color:#484f58;">--</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No logs found</h2>
+        <p>No log entries for {{ date }}. Try a different date or use the app to generate logs.</p>
+    </div>
+    {% endif %}
+</body>
+</html>
