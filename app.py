@@ -18,7 +18,7 @@ import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pygooglenews import GoogleNews
-from log_utils import log_action, _get_client_ip
+from log_utils import log_action, _get_client_ip, read_recent_logs
 
 # Load environment variables dari file .env
 load_dotenv()
