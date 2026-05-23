@@ -678,7 +678,12 @@ def analyze_stock():
     ticker = request.form.get('ticker', '').strip().upper()
     force_refresh = request.form.get('force_refresh', 'false').lower() == 'true'
     
+    log_action('analyze', 'analyze_stock', params={'ticker': ticker, 'force_refresh': force_refresh})
+    start_time = time.time()
+    
     if not ticker:
+        log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                  detail='Ticker kosong', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Ticker tidak boleh kosong."}), 400
 
     print(f"Memproses analisis untuk ticker: {ticker} (force_refresh={force_refresh})")
@@ -690,9 +695,13 @@ def analyze_stock():
         data.columns = data.columns.get_level_values(0)
 
     if error_msg:
+        log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                  detail=error_msg, duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": error_msg}), 500
     
     if data.empty:
+        log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                  detail='Data kosong', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Data saham tidak ditemukan atau ada masalah."}), 500
     
     # Pastikan tipe data numerik untuk kolom harga
@@ -706,25 +715,35 @@ def analyze_stock():
         
         # Pastikan kolom 'Close' ada
         if 'Close' not in data.columns:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail='Kolom Close tidak ditemukan', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Kolom Close tidak ditemukan di data."}), 500
             
         close_prices = data['Close']
 
         if close_prices.empty or len(close_prices) == 0:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail='Close prices kosong', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Data harga Close tidak ditemukan atau kosong."}), 500
 
         if len(close_prices) < 15:
-             return jsonify({"status": "error", "message": "Data tidak cukup untuk menghitung RSI (memerlukan minimal 15 titik data)."}), 500
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail='Data tidak cukup untuk RSI', duration_ms=(time.time() - start_time) * 1000)
+            return jsonify({"status": "error", "message": "Data tidak cukup untuk menghitung RSI (memerlukan minimal 15 titik data)."}), 500
 
         # Ambil nilai terakhir secara aman
         try:
             last_price = close_prices.iloc[-1]
         except IndexError:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail='Gagal ambil harga akhir', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Gagal mengambil harga akhir dari data."}), 500
             
         try:
             current_date = data.index[-1]
         except IndexError:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail='Gagal ambil tanggal akhir', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Gagal mengambil tanggal akhir dari data."}), 500
 
         # Hitung RSI
@@ -774,6 +793,8 @@ def analyze_stock():
         required_cols = ['Open', 'High', 'Low', 'Close']
         missing_cols = [col for col in required_cols if col not in data.columns]
         if missing_cols:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail=f'Missing cols: {", ".join(missing_cols)}', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": f"Data tidak lengkap. Kolom yang hilang: {', '.join(missing_cols)}."}), 500
             
         df_plot = data.copy()
@@ -831,6 +852,9 @@ def analyze_stock():
         # Format timestamp untuk display
         cache_timestamp = metadata.get('timestamp', datetime.now().isoformat()) if metadata else datetime.now().isoformat()
         
+        duration = (time.time() - start_time) * 1000
+        log_action('analyze', 'analyze_stock', params={'ticker': ticker, 'force_refresh': force_refresh},
+                  status='success', duration_ms=duration)
         return jsonify({
             "status": "success",
             "ticker": ticker,
@@ -868,6 +892,8 @@ def analyze_stock():
         import traceback
         print(traceback.format_exc())
         
+        log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                  detail=str(e), duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": f"Terjadi kesalahan internal: {str(e)}"}), 500
 
 def fetch_related_news(ticker):
