@@ -1603,6 +1603,9 @@ def extract_us_stocks():
         response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
         return response
     
+    log_action('extract', 'start_us_extraction', params={'list': 'uslist.csv'})
+    start_time = time.time()
+    
     global extraction_progress
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
@@ -1611,19 +1614,27 @@ def extract_us_stocks():
     
     if not is_safe:
         print(f"[EXTRACT/US] Rate limit blocking extraction", flush=True)
+        log_action('extract', 'start_us_extraction', status='error',
+                  detail=f'Rate limited: {message}', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": message}), 429
     
     if extraction_progress['is_running']:
         print(f"[EXTRACT/US] Extraction already running", flush=True)
+        log_action('extract', 'start_us_extraction', status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Extraction sedang berjalan"}), 409
     
     if not os.path.exists(uslist_path):
         print(f"[EXTRACT/US] File not found: {uslist_path}", flush=True)
+        log_action('extract', 'start_us_extraction', status='error',
+                  detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
         tickers_df = pd.read_csv(uslist_path)
         if 'Symbol' not in tickers_df.columns:
+            log_action('extract', 'start_us_extraction', status='error',
+                      detail='Symbol column missing', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Kolom 'Symbol' tidak ditemukan di uslist.csv"}), 400
         
         tickers = tickers_df['Symbol'].tolist()
@@ -1665,6 +1676,8 @@ def extract_us_stocks():
             extraction_progress['status'] = 'completed'
             extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
             extraction_progress['is_running'] = False
+            log_action('extract', 'run_us_extraction', params={'list': 'uslist.csv'}, status='success',
+                      detail=f'{extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed')
             print(f"[EXTRACTION] US extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
             
             # Create rate limit marker for next extraction
@@ -1675,6 +1688,9 @@ def extract_us_stocks():
         thread.start()
         print(f"[EXTRACT/US] Thread started successfully", flush=True)
         
+        duration = (time.time() - start_time) * 1000
+        log_action('extract', 'start_us_extraction', status='success',
+                  detail=f'Thread started, {len(tickers)} tickers', duration_ms=duration)
         return jsonify({
             "status": "success",
             "message": "Extraction started",
@@ -1682,6 +1698,9 @@ def extract_us_stocks():
         })
         
     except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('extract', 'start_us_extraction', status='error',
+                  detail=str(e), duration_ms=duration)
         extraction_progress['is_running'] = False
         extraction_progress['status'] = 'error'
         extraction_progress['message'] = str(e)
@@ -1699,6 +1718,9 @@ def extract_id_stocks():
         response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
         return response
     
+    log_action('extract', 'start_id_extraction', params={'list': 'idlist.csv'})
+    start_time = time.time()
+    
     global extraction_progress
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
@@ -1707,19 +1729,27 @@ def extract_id_stocks():
     
     if not is_safe:
         print(f"[EXTRACT/ID] Rate limit blocking extraction", flush=True)
+        log_action('extract', 'start_id_extraction', status='error',
+                  detail=f'Rate limited: {message}', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": message}), 429
     
     if extraction_progress['is_running']:
         print(f"[EXTRACT/ID] Extraction already running", flush=True)
+        log_action('extract', 'start_id_extraction', status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Extraction sedang berjalan"}), 409
     
     if not os.path.exists(idlist_path):
         print(f"[EXTRACT/ID] File not found: {idlist_path}", flush=True)
+        log_action('extract', 'start_id_extraction', status='error',
+                  detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
         tickers_df = pd.read_csv(idlist_path)
         if 'Symbol' not in tickers_df.columns:
+            log_action('extract', 'start_id_extraction', status='error',
+                      detail='Symbol column missing', duration_ms=(time.time() - start_time) * 1000)
             return jsonify({"status": "error", "message": "Kolom 'Symbol' tidak ditemukan di idlist.csv"}), 400
         
         tickers = tickers_df['Symbol'].tolist()
@@ -1761,6 +1791,8 @@ def extract_id_stocks():
             extraction_progress['status'] = 'completed'
             extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
             extraction_progress['is_running'] = False
+            log_action('extract', 'run_id_extraction', params={'list': 'idlist.csv'}, status='success',
+                      detail=f'{extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed')
             print(f"[EXTRACTION] ID extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
             
             # Create rate limit marker for next extraction
@@ -1771,6 +1803,9 @@ def extract_id_stocks():
         thread.start()
         print(f"[EXTRACT/ID] Thread started successfully", flush=True)
         
+        duration = (time.time() - start_time) * 1000
+        log_action('extract', 'start_id_extraction', status='success',
+                  detail=f'Thread started, {len(tickers)} tickers', duration_ms=duration)
         return jsonify({
             "status": "success",
             "message": "Extraction started",
@@ -1778,6 +1813,9 @@ def extract_id_stocks():
         })
         
     except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('extract', 'start_id_extraction', status='error',
+                  detail=str(e), duration_ms=duration)
         extraction_progress['is_running'] = False
         extraction_progress['status'] = 'error'
         extraction_progress['message'] = str(e)
