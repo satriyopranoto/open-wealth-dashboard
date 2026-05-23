@@ -981,9 +981,14 @@ def screener_most_active():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'most_active', params={'market': 'ID'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('most-active')
         if cached_data is not None:
+            log_action('screener', 'most_active', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1030,6 +1035,9 @@ def screener_most_active():
         results_df = pd.DataFrame(results)
         save_screener_to_cache('most-active', results_df)
         
+        duration = (time.time() - start_time) * 1000
+        log_action('screener', 'most_active', params={'market': 'ID'}, status='success',
+                  detail=f'{len(results)} results', duration_ms=duration)
         return jsonify({
             "status": "success",
             "count": len(results),
@@ -1037,6 +1045,9 @@ def screener_most_active():
         })
         
     except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener', 'most_active', params={'market': 'ID'}, status='error',
+                  detail=str(e), duration_ms=duration)
         import traceback
         print(f"Error saat mengambil screener: {str(e)}")
         traceback.print_exc()
@@ -1054,9 +1065,14 @@ def screener_day_gainers():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'day_gainers', params={'market': 'ID'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('day-gainers')
         if cached_data is not None:
+            log_action('screener', 'day_gainers', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1127,9 +1143,14 @@ def screener_net_net():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'net_net', params={'market': 'ID'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('net-net')
         if cached_data is not None:
+            log_action('screener', 'net_net', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1200,9 +1221,14 @@ def screener_acquirers_multiple():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'acquirers_multiple', params={'market': 'ID'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('acquirers-multiple')
         if cached_data is not None:
+            log_action('screener', 'acquirers_multiple', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1273,9 +1299,14 @@ def screener_us_most_active():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'us_most_active', params={'market': 'US'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('us-most-active')
         if cached_data is not None:
+            log_action('screener', 'us_most_active', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1344,9 +1375,14 @@ def screener_us_day_gainers():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'us_day_gainers', params={'market': 'US'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('us-day-gainers')
         if cached_data is not None:
+            log_action('screener', 'us_day_gainers', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1415,9 +1451,14 @@ def screener_us_net_net():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'us_net_net', params={'market': 'US'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('us-net-net')
         if cached_data is not None:
+            log_action('screener', 'us_net_net', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
@@ -1486,9 +1527,14 @@ def screener_us_acquirers_multiple():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener', 'us_acquirers_multiple', params={'market': 'US'})
+    start_time = time.time()
+    
     try:
         cached_data, metadata, error = load_cached_screener('us-acquirers-multiple')
         if cached_data is not None:
+            log_action('screener', 'us_acquirers_multiple', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
             return jsonify({
                 "status": "success",
                 "count": len(cached_data),
