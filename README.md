@@ -50,6 +50,30 @@ Single-file Flask backend ([app.py](app.py)) + single-page HTML frontend ([templ
 | `/extract/status` | GET | Current extraction status + rate limit check |
 | `/logs` | GET | View usage logs with date & limit filters |
 
+### Docker Networking & Client IP
+
+When running in Docker, the logged client IP depends on your platform:
+
+| Platform | Client IP | Notes |
+|----------|-----------|-------|
+| **Windows (Docker Desktop)** | Docker gateway (`172.x.x.x`) | WSL2 NAT limitation; IP tracking works functionally |
+| **Linux VPS** | Real client IP ✅ | Use `network_mode: "host"` on the nginx service |
+
+To get real client IPs on a **Linux VPS**, change the nginx service in `docker-compose.yml`:
+
+```yaml
+services:
+  nginx:
+    image: nginx:alpine
+    network_mode: "host"   # <-- langsung lihat IP asli client
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+```
+
+Then nginx passes the real IP to the app via `X-Forwarded-For` header automatically.
+
 ### Action Logging
 
 Every feature usage is automatically logged to `logs/usage-YYYY-MM-DD.log` in JSON lines format. Each entry records:

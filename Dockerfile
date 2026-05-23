@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -c 'import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot'
 
 # Copy source code
-COPY app.py downloader.py ./
+COPY app.py downloader.py log_utils.py ./
 COPY uslist.csv idlist.csv ./
 COPY templates/ templates/
 
@@ -32,4 +32,4 @@ ENV FLASK_PORT=5000
 
 # 1 worker karena app pakai global dict untuk SSE progress tracking
 # 4 threads untuk handle concurrent requests (setara threaded=True di Flask dev server)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "4", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "4", "--timeout", "120", "--forwarded-allow-ips", "*", "app:app"]
