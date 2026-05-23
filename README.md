@@ -48,6 +48,22 @@ Single-file Flask backend ([app.py](app.py)) + single-page HTML frontend ([templ
 | `/extract/us` | POST | Background bulk download for uslist.csv |
 | `/extract/progress` | GET | SSE stream for extraction progress |
 | `/extract/status` | GET | Current extraction status + rate limit check |
+| `/logs` | GET | View usage logs with date & limit filters |
+
+### Action Logging
+
+Every feature usage is automatically logged to `logs/usage-YYYY-MM-DD.log` in JSON lines format. Each entry records:
+
+- **timestamp** — when the action happened
+- **feature** — feature category (analyze, screener, extract, refresh, etc.)
+- **action** — specific action name
+- **status** — success or error
+- **params** — request parameters (sanitized, truncated at 100 chars)
+- **duration_ms** — execution time in milliseconds
+- **ip** — client origin IP (handles X-Forwarded-For for reverse proxies)
+- **detail** — error message or result summary
+
+View logs in-browser at `/logs?date=2026-05-23&limit=50`. Date picker and limit control available on the page.
 
 ### Cache structure (`cache/`)
 
