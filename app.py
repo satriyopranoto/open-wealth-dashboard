@@ -18,6 +18,7 @@ import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pygooglenews import GoogleNews
+from log_utils import log_action, _get_client_ip
 
 # Load environment variables dari file .env
 load_dotenv()
@@ -605,7 +606,7 @@ def calculate_bollinger_bands(df, period=20, num_std=2):
 @app.route('/', methods=['GET'])
 def index():
     """Halaman Landing Page"""
-    # Kirim base URL ke template
+    log_action('landing_page', 'view')
     return render_template('index.html', api_base_url=app.config['API_BASE_URL'])
 
 @app.route('/refresh', methods=['POST', 'OPTIONS'])
@@ -624,7 +625,10 @@ def refresh_data():
     ticker = request.form.get('ticker', '').strip().upper()
     
     if not ticker:
+        log_action('refresh', 'refresh_data', params={'ticker': ticker}, status='error', detail='Ticker kosong')
         return jsonify({"status": "error", "message": "Ticker tidak boleh kosong."}), 400
+
+    start_time = time.time()
 
     try:
         print(f"Refreshing data untuk ticker: {ticker}")
@@ -632,11 +636,19 @@ def refresh_data():
         data, metadata, error_msg = download_stock_data(ticker, force_refresh=True)
 
         if error_msg:
+            duration = (time.time() - start_time) * 1000
+            log_action('refresh', 'refresh_data', params={'ticker': ticker}, status='error',
+                      detail=error_msg, duration_ms=duration)
             return jsonify({"status": "error", "message": error_msg}), 500
 
         if data is None or data.empty:
+            duration = (time.time() - start_time) * 1000
+            log_action('refresh', 'refresh_data', params={'ticker': ticker}, status='error',
+                      detail='Data kosong', duration_ms=duration)
             return jsonify({"status": "error", "message": "Data saham tidak ditemukan atau ada masalah."}), 500
 
+        duration = (time.time() - start_time) * 1000
+        log_action('refresh', 'refresh_data', params={'ticker': ticker}, status='success', duration_ms=duration)
         return jsonify({
             "status": "success",
             "message": f"Data untuk {ticker} berhasil direfresh!"
@@ -644,6 +656,9 @@ def refresh_data():
     except Exception as e:
         import traceback
         print(traceback.format_exc())
+        duration = (time.time() - start_time) * 1000
+        log_action('refresh', 'refresh_data', params={'ticker': ticker}, status='error',
+                  detail=str(e), duration_ms=duration)
         return jsonify({"status": "error", "message": f"Terjadi kesalahan saat refresh: {str(e)}"}), 500
 
 @app.route('/analyze', methods=['POST', 'OPTIONS'])
