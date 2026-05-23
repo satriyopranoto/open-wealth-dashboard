@@ -1902,6 +1902,8 @@ def run_bb_screener(list_path, list_type):
     """
     Helper function untuk menjalankan BB screener pada watchlist
     """
+    log_action('screener_bb', 'run_bb_screener', params={'type': list_type})
+    screener_start = time.time()
     global bb_screener_progress
     
     try:
@@ -2004,11 +2006,15 @@ def run_bb_screener(list_path, list_type):
         bb_screener_progress['results'] = sorted(bb_screener_progress['results'], key=lambda x: x.get('value', 0), reverse=True)
         bb_screener_progress['message'] = f'BB Screener completed: {len(bb_screener_progress["results"])} stocks analyzed'
         bb_screener_progress['is_running'] = False
+        log_action('screener_bb', 'run_bb_screener', params={'type': list_type}, status='success',
+                  detail=f'{len(bb_screener_progress["results"])} stocks analyzed')
         
     except Exception as e:
         bb_screener_progress['status'] = 'error'
         bb_screener_progress['message'] = str(e)
         bb_screener_progress['is_running'] = False
+        log_action('screener_bb', 'run_bb_screener', params={'type': list_type}, status='error',
+                  detail=str(e))
 
 @app.route('/screener/us-bb-breakout', methods=['GET', 'POST', 'OPTIONS'])
 def screener_us_bb_breakout():
@@ -2022,10 +2028,15 @@ def screener_us_bb_breakout():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'})
+    start_time = time.time()
+    
     global bb_screener_progress
     
     cached_data, metadata, error = load_cached_screener('us-bb-breakout')
     if cached_data is not None:
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
@@ -2038,9 +2049,13 @@ def screener_us_bb_breakout():
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     
     if bb_screener_progress['is_running']:
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     if not os.path.exists(uslist_path):
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
+                  detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
@@ -2050,6 +2065,9 @@ def screener_us_bb_breakout():
             results_df = pd.DataFrame(bb_screener_progress['results'])
             save_screener_to_cache('us-bb-breakout', results_df)
         
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
+                  detail=f'{len(bb_screener_progress["results"])} results', duration_ms=duration)
         response = jsonify({
             "status": "success",
             "message": bb_screener_progress['message'],
@@ -2062,6 +2080,9 @@ def screener_us_bb_breakout():
         return response
         
     except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
+                  detail=str(e), duration_ms=duration)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/screener/id-bb-breakout', methods=['GET', 'POST', 'OPTIONS'])
@@ -2076,10 +2097,15 @@ def screener_id_bb_breakout():
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
         return response
     
+    log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'})
+    start_time = time.time()
+    
     global bb_screener_progress
     
     cached_data, metadata, error = load_cached_screener('id-bb-breakout')
     if cached_data is not None:
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
@@ -2092,9 +2118,13 @@ def screener_id_bb_breakout():
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     
     if bb_screener_progress['is_running']:
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     if not os.path.exists(idlist_path):
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
+                  detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
@@ -2104,6 +2134,9 @@ def screener_id_bb_breakout():
             results_df = pd.DataFrame(bb_screener_progress['results'])
             save_screener_to_cache('id-bb-breakout', results_df)
         
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
+                  detail=f'{len(bb_screener_progress["results"])} results', duration_ms=duration)
         response = jsonify({
             "status": "success",
             "message": bb_screener_progress['message'],
@@ -2116,6 +2149,9 @@ def screener_id_bb_breakout():
         return response
         
     except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
+                  detail=str(e), duration_ms=duration)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/screener/bb-progress', methods=['GET', 'OPTIONS'])
