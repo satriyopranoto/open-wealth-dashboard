@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import yfinance as yf
 import pandas as pd
@@ -31,6 +31,11 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Load konfigurasi dari environment variables
 app.config['API_BASE_URL'] = os.getenv('API_BASE_URL', 'http://localhost:5000')
 app.config['FLASK_PORT'] = int(os.getenv('FLASK_PORT', 5000))
+
+# Serve assets (favicon, etc.)
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory('assets', filename)
 
 # Konfigurasi waktu download
 RETRY_DELAY = 5

@@ -19,6 +19,7 @@ RUN python -c 'import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplo
 COPY app.py downloader.py log_utils.py ./
 COPY uslist.csv idlist.csv ./
 COPY templates/ templates/
+COPY assets/ assets/
 
 # Cache dir; akan di-override oleh bind-mount saat docker compose up
 RUN mkdir -p cache
