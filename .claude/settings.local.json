@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import flask_cors; print\\(flask_cors.__file__\\)\")",
+      "Bash(wsl -e bash -c \"which python3 && python3 -c 'import flask_cors; print\\(flask_cors.__file__\\)' 2>&1\")",
+      "Bash(wsl -e bash -c \"ls ~/stocktrade/requirements.txt 2>/dev/null && cat ~/stocktrade/requirements.txt\")",
+      "Bash(wsl -e bash -c \"pip3 install flask-cors --break-system-packages 2>&1 | tail -5\")",
+      "Bash(wsl -e bash -c \"python3 -m pip install flask-cors --break-system-packages 2>&1 | tail -5\")",
+      "Bash(wsl -e bash -c \"ls ~/stocktrade/.venv 2>/dev/null || ls ~/stocktrade/venv 2>/dev/null || echo 'no venv'\")",
+      "Bash(wsl -e bash -c \"~/stocktrade/venv/Scripts/pip install flask-cors 2>&1 | tail -5\")",
+      "Bash(wsl -e bash -c \"ls ~/stocktrade/venv/Scripts/ 2>/dev/null || ls ~/stocktrade/venv/bin/ 2>/dev/null\")",
+      "Bash(wsl -e bash -c \"~/stocktrade/venv/bin/pip install flask-cors 2>&1 | tail -5\")",
+      "Bash(wsl -e bash -c \"~/stocktrade/venv/bin/python -c 'import flask_cors; print\\(flask_cors.__file__\\)'\")",
+      "Bash(wsl -e bash -c \"mkdir -p ~/stocktrade/.vscode\")",
+      "Bash(wsl -e bash -c \"ls ~/stocktrade/venv/bin/python*\")",
+      "Bash(wsl -e bash -c \"ls ~/stocktrade/.venv/bin/python* 2>/dev/null || ls ~/stocktrade/.venv/Scripts/python* 2>/dev/null\")",
+      "Bash(wsl -e bash -c \"~/stocktrade/.venv/bin/pip list 2>/dev/null | grep -i flask || ~/stocktrade/.venv/Scripts/pip list 2>/dev/null | grep -i flask\")"
+    ]
+  }
+}
