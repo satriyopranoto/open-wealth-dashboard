@@ -383,6 +383,13 @@
 </div>
 </div>
 </div>
+<!-- Upcoming Events Section -->
+<div id="upcoming-events-section" class="glass-panel p-8" style="display:none;">
+<h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+<span class="w-8 h-[1px] bg-[#d4af37]"></span> Upcoming Events
+</h3>
+<div id="events-content"></div>
+</div>
 </div>
 <div class="space-y-8">
 <!-- Company Profile & News -->
@@ -937,6 +944,7 @@
                         
                         displayHolders('major-holders', data.fundamental.major_holders);
                         displayHolders('institutional-holders', data.fundamental.institutional_holders);
+                        renderEvents(data.fundamental.events);
                     }
 
                     resultArea.classList.remove('hidden');
@@ -1039,7 +1047,112 @@
             
             section.classList.remove('hidden');
         }
-        
+
+        function renderEvents(events) {
+            const section = document.getElementById('upcoming-events-section');
+            const content = document.getElementById('events-content');
+            const now = new Date();
+
+            const noData = !events ||
+                ((!events.earnings || events.earnings.length === 0) &&
+                 (!events.dividends || events.dividends.length === 0) &&
+                 (!events.splits || events.splits.length === 0));
+
+            if (noData) {
+                content.innerHTML = '<p class="text-[#99907c] text-sm">No recorded events</p>';
+                section.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+
+            // --- Earnings ---
+            if (events.earnings && events.earnings.length > 0) {
+                const upcoming = events.earnings.filter(e => new Date(e.date) >= now);
+                const recent   = events.earnings
+                    .filter(e => new Date(e.date) < now)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 2);
+                const rows     = [...upcoming, ...recent].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                html += `<div class="mb-5">
+                    <div class="data-label mb-2">Earnings Dates</div>
+                    <table class="holders-table w-full text-sm">
+                        <thead><tr>
+                            <th class="text-left py-2">Date</th>
+                            <th class="text-right py-2">EPS Est.</th>
+                            <th class="text-right py-2">EPS Actual</th>
+                            <th class="text-right py-2">Surprise</th>
+                        </tr></thead>
+                        <tbody>`;
+                rows.forEach(e => {
+                    const d = new Date(e.date);
+                    const isUpcoming = d >= now;
+                    const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const badge = isUpcoming
+                        ? '<span class="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[#d4af37]/20 text-[#d4af37] font-medium">UPCOMING</span>'
+                        : '';
+                    const est     = e.eps_estimate != null ? e.eps_estimate.toFixed(2) : 'N/A';
+                    const actual  = e.eps_actual   != null ? e.eps_actual.toFixed(2)   : 'N/A';
+                    const surp    = e.eps_surprise_pct != null
+                        ? `<span class="${e.eps_surprise_pct >= 0 ? 'positive' : 'negative'}">${e.eps_surprise_pct.toFixed(1)}%</span>`
+                        : 'N/A';
+                    html += `<tr>
+                        <td class="py-2 text-[#eae1d4]">${dateStr}${badge}</td>
+                        <td class="py-2 text-right tabular-nums text-[#99907c]">${est}</td>
+                        <td class="py-2 text-right tabular-nums text-[#99907c]">${actual}</td>
+                        <td class="py-2 text-right tabular-nums">${surp}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+
+            // --- Dividends ---
+            if (events.dividends && events.dividends.length > 0) {
+                html += `<div class="mb-5">
+                    <div class="data-label mb-2">Dividends</div>
+                    <table class="holders-table w-full text-sm">
+                        <thead><tr>
+                            <th class="text-left py-2">Ex-Date</th>
+                            <th class="text-right py-2">Amount / Share</th>
+                        </tr></thead>
+                        <tbody>`;
+                events.dividends.forEach(d => {
+                    const dateStr = new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const amt = d.amount != null ? d.amount.toFixed(4) : 'N/A';
+                    html += `<tr>
+                        <td class="py-2 text-[#eae1d4]">${dateStr}</td>
+                        <td class="py-2 text-right tabular-nums text-[#d4af37] font-bold">${amt}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+
+            // --- Splits ---
+            if (events.splits && events.splits.length > 0) {
+                html += `<div class="mb-2">
+                    <div class="data-label mb-2">Stock Splits</div>
+                    <table class="holders-table w-full text-sm">
+                        <thead><tr>
+                            <th class="text-left py-2">Date</th>
+                            <th class="text-right py-2">Ratio</th>
+                        </tr></thead>
+                        <tbody>`;
+                events.splits.forEach(s => {
+                    const dateStr = new Date(s.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const ratio = s.ratio != null ? s.ratio.toFixed(2) : 'N/A';
+                    html += `<tr>
+                        <td class="py-2 text-[#eae1d4]">${dateStr}</td>
+                        <td class="py-2 text-right tabular-nums text-[#99907c]">${ratio}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+
+            content.innerHTML = html;
+            section.style.display = 'block';
+        }
+
         function renderScreenerResults(titleText, data) {
             const screenerResults = document.getElementById('screener-results');
             const screenerTitle = document.getElementById('screener-title');

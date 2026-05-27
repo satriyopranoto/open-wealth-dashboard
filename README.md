@@ -5,11 +5,17 @@ Open-source stock analysis engine for US and Indonesian (IDX) markets. Built wit
 ## Features
 
 - **Stock Analyzer** — RSI (14), Donchian Channel Stop Loss, candlestick chart, BUY/HOLD/SELL recommendation
+![Stock Analyzer](image.png)
 - **Fundamental Screeners** — Most Active, Day Gainers, Net Net Strategy, Acquirers Multiple (both US & ID)
+![One of fundamental screener](image-2.png)
 - **Technical Screener** — Bollinger Band Breakout screener against a local watchlist
+![Breakout Screener](image-3.png)
 - **Risk Management** — Client-side lot size calculator based on capital, risk %, and stop loss
+![Lot size calculation](image-4.png)
 - **Fundamental Data** — 12 core metrics, company profile, ownership structure (major + institutional holders)
+![fundamental data](image-1.png)
 - **Market Intelligence** — Top 10 news from Google News (Indonesian + English)
+![Market Intelegence](image-5.png)
 
 ## Ticker Format
 
