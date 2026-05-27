@@ -1,0 +1,16 @@
+# Skip large images - they slow down extraction
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Skip cache and logs
+cache/
+logs/
+__pycache__/
+venv/
+.git/
+
+# Skip documentation screenshots
+assets/

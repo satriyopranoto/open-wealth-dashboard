@@ -1,0 +1,252 @@
+{
+  "communities": {
+    "0": [
+      "app_py",
+      "requirements_txt",
+      "stocktrade_app_after_request",
+      "stocktrade_app_analyze_stock",
+      "stocktrade_app_calculate_bollinger_bands",
+      "stocktrade_app_calculate_rsi",
+      "stocktrade_app_calculate_sl",
+      "stocktrade_app_create_extraction_marker",
+      "stocktrade_app_extract_progress",
+      "stocktrade_app_fetch_related_news",
+      "stocktrade_app_index",
+      "stocktrade_app_rationale_1831",
+      "stocktrade_app_rationale_1907",
+      "stocktrade_app_rationale_203",
+      "stocktrade_app_rationale_2164",
+      "stocktrade_app_rationale_540",
+      "stocktrade_app_rationale_563",
+      "stocktrade_app_rationale_598",
+      "stocktrade_app_rationale_671",
+      "stocktrade_app_rationale_905",
+      "stocktrade_app_run_bb_screener",
+      "stocktrade_app_screener_bb_progress",
+      "stocktrade_app_serve_assets",
+      "yfinance_api"
+    ],
+    "1": [
+      "stocktrade_app_get_screener_cache_file",
+      "stocktrade_app_load_cached_screener",
+      "stocktrade_app_rationale_1063",
+      "stocktrade_app_rationale_1141",
+      "stocktrade_app_rationale_1219",
+      "stocktrade_app_rationale_143",
+      "stocktrade_app_rationale_2026",
+      "stocktrade_app_rationale_93",
+      "stocktrade_app_rationale_979",
+      "stocktrade_app_rationale_99",
+      "stocktrade_app_save_screener_to_cache",
+      "stocktrade_app_screener_acquirers_multiple",
+      "stocktrade_app_screener_day_gainers",
+      "stocktrade_app_screener_most_active",
+      "stocktrade_app_screener_net_net",
+      "stocktrade_app_screener_us_bb_breakout",
+      "stocktrade_app_screener_us_day_gainers",
+      "stocktrade_app_screener_us_net_net",
+      "stocktrade_log_utils_log_action",
+      "stocktrade_log_utils_rationale_59"
+    ],
+    "2": [
+      "action_logging_md",
+      "log_utils_py",
+      "logging_system",
+      "logs_html",
+      "stocktrade_app_rationale_2205",
+      "stocktrade_app_view_logs",
+      "stocktrade_log_utils_get_client_ip",
+      "stocktrade_log_utils_get_log_path",
+      "stocktrade_log_utils_get_log_path_for_date",
+      "stocktrade_log_utils_list_available_dates",
+      "stocktrade_log_utils_rationale_1",
+      "stocktrade_log_utils_rationale_104",
+      "stocktrade_log_utils_rationale_25",
+      "stocktrade_log_utils_rationale_31",
+      "stocktrade_log_utils_rationale_46",
+      "stocktrade_log_utils_read_recent_logs"
+    ],
+    "3": [
+      "downloader_py",
+      "stocktrade_app_extract_id_stocks",
+      "stocktrade_app_extract_status",
+      "stocktrade_app_extract_us_stocks",
+      "stocktrade_app_rationale_1601",
+      "stocktrade_app_rationale_171",
+      "stocktrade_app_rationale_1716",
+      "stocktrade_app_rationale_1873",
+      "stocktrade_downloader_check_rate_limit",
+      "stocktrade_downloader_download_ticker_data",
+      "stocktrade_downloader_get_last_date",
+      "stocktrade_downloader_main",
+      "stocktrade_downloader_rationale_33",
+      "stocktrade_downloader_rationale_9"
+    ],
+    "4": [
+      "stocktrade_app_download_stock_data",
+      "stocktrade_app_get_cache_file_path",
+      "stocktrade_app_load_cached_data",
+      "stocktrade_app_rationale_407",
+      "stocktrade_app_rationale_462",
+      "stocktrade_app_rationale_495",
+      "stocktrade_app_rationale_619",
+      "stocktrade_app_rationale_81",
+      "stocktrade_app_refresh_data",
+      "stocktrade_app_save_data_to_cache"
+    ],
+    "5": [
+      "cache_system",
+      "claude_md",
+      "config_md",
+      "docker_compose_yml",
+      "flask_backend",
+      "frontend_spa",
+      "index_html",
+      "nginx_proxy",
+      "readme_md"
+    ],
+    "6": [
+      "stocktrade_app_download_fundamental_data",
+      "stocktrade_app_get_fundamental_cache_file",
+      "stocktrade_app_load_cached_fundamental",
+      "stocktrade_app_rationale_216",
+      "stocktrade_app_rationale_244",
+      "stocktrade_app_rationale_266",
+      "stocktrade_app_rationale_87",
+      "stocktrade_app_save_fundamental_to_cache"
+    ],
+    "7": [
+      "claude_settings_local_json",
+      "claude_settings_local_permissions",
+      "claude_settings_local_permissions_allow"
+    ],
+    "8": [
+      "vscode_settings_json",
+      "vscode_settings_python_defaultinterpreterpath"
+    ]
+  },
+  "cohesion": {
+    "0": 0.10507246376811594,
+    "1": 0.17894736842105263,
+    "2": 0.15,
+    "3": 0.17582417582417584,
+    "4": 0.2222222222222222,
+    "5": 0.3888888888888889,
+    "6": 0.2857142857142857,
+    "7": 0.6666666666666666,
+    "8": 1.0
+  },
+  "gods": [
+    {
+      "id": "stocktrade_log_utils_log_action",
+      "label": "log_action()",
+      "degree": 18
+    },
+    {
+      "id": "stocktrade_app_load_cached_screener",
+      "label": "load_cached_screener()",
+      "degree": 10
+    },
+    {
+      "id": "stocktrade_app_save_screener_to_cache",
+      "label": "save_screener_to_cache()",
+      "degree": 10
+    },
+    {
+      "id": "stocktrade_app_analyze_stock",
+      "label": "analyze_stock()",
+      "degree": 8
+    },
+    {
+      "id": "stocktrade_downloader_check_rate_limit",
+      "label": "check_rate_limit()",
+      "degree": 8
+    },
+    {
+      "id": "stocktrade_app_download_stock_data",
+      "label": "download_stock_data()",
+      "degree": 7
+    },
+    {
+      "id": "stocktrade_app_run_bb_screener",
+      "label": "run_bb_screener()",
+      "degree": 7
+    },
+    {
+      "id": "stocktrade_log_utils_read_recent_logs",
+      "label": "read_recent_logs()",
+      "degree": 6
+    },
+    {
+      "id": "stocktrade_app_screener_us_bb_breakout",
+      "label": "screener_us_bb_breakout()",
+      "degree": 6
+    },
+    {
+      "id": "stocktrade_app_download_fundamental_data",
+      "label": "download_fundamental_data()",
+      "degree": 5
+    }
+  ],
+  "surprises": [
+    {
+      "source": "index()",
+      "target": "log_action()",
+      "source_files": [
+        "app.py",
+        "log_utils.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities; peripheral node `index()` unexpectedly reaches hub `log_action()`"
+    },
+    {
+      "source": "run_bb_screener()",
+      "target": "log_action()",
+      "source_files": [
+        "app.py",
+        "log_utils.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "refresh_data()",
+      "target": "log_action()",
+      "source_files": [
+        "app.py",
+        "log_utils.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "analyze_stock()",
+      "target": "log_action()",
+      "source_files": [
+        "app.py",
+        "log_utils.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "extract_us_stocks()",
+      "target": "log_action()",
+      "source_files": [
+        "app.py",
+        "log_utils.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

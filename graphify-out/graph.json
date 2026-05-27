@@ -1,0 +1,2881 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "log_utils.py",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L1",
+      "community": 2,
+      "norm_label": "log_utils.py",
+      "id": "log_utils_py"
+    },
+    {
+      "label": "_get_log_path()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L18",
+      "community": 2,
+      "norm_label": "_get_log_path()",
+      "id": "stocktrade_log_utils_get_log_path"
+    },
+    {
+      "label": "_get_log_path_for_date()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L24",
+      "community": 2,
+      "norm_label": "_get_log_path_for_date()",
+      "id": "stocktrade_log_utils_get_log_path_for_date"
+    },
+    {
+      "label": "list_available_dates()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L30",
+      "community": 2,
+      "norm_label": "list_available_dates()",
+      "id": "stocktrade_log_utils_list_available_dates"
+    },
+    {
+      "label": "_get_client_ip()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L45",
+      "community": 2,
+      "norm_label": "_get_client_ip()",
+      "id": "stocktrade_log_utils_get_client_ip"
+    },
+    {
+      "label": "log_action()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L58",
+      "community": 1,
+      "norm_label": "log_action()",
+      "id": "stocktrade_log_utils_log_action"
+    },
+    {
+      "label": "read_recent_logs()",
+      "file_type": "code",
+      "source_file": "log_utils.py",
+      "source_location": "L103",
+      "community": 2,
+      "norm_label": "read_recent_logs()",
+      "id": "stocktrade_log_utils_read_recent_logs"
+    },
+    {
+      "label": "Logging utility untuk mencatat setiap action/penggunaan feature. Menyimpan log d",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L1",
+      "community": 2,
+      "norm_label": "logging utility untuk mencatat setiap action/penggunaan feature. menyimpan log d",
+      "id": "stocktrade_log_utils_rationale_1"
+    },
+    {
+      "label": "Mendapatkan path file log untuk tanggal tertentu.",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L25",
+      "community": 2,
+      "norm_label": "mendapatkan path file log untuk tanggal tertentu.",
+      "id": "stocktrade_log_utils_rationale_25"
+    },
+    {
+      "label": "Mengembalikan daftar tanggal yang memiliki file log.",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L31",
+      "community": 2,
+      "norm_label": "mengembalikan daftar tanggal yang memiliki file log.",
+      "id": "stocktrade_log_utils_rationale_31"
+    },
+    {
+      "label": "Mendapatkan IP asli client dari Flask request.     Handle X-Forwarded-For untuk",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L46",
+      "community": 2,
+      "norm_label": "mendapatkan ip asli client dari flask request.     handle x-forwarded-for untuk",
+      "id": "stocktrade_log_utils_rationale_46"
+    },
+    {
+      "label": "Mencatat action ke file log.      Args:         feature: Nama fitur (e.g., \"anal",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L59",
+      "community": 1,
+      "norm_label": "mencatat action ke file log.      args:         feature: nama fitur (e.g., \"anal",
+      "id": "stocktrade_log_utils_rationale_59"
+    },
+    {
+      "label": "Membaca log terbaru dari file log.      Args:         limit: Jumlah baris terakh",
+      "file_type": "rationale",
+      "source_file": "log_utils.py",
+      "source_location": "L104",
+      "community": 2,
+      "norm_label": "membaca log terbaru dari file log.      args:         limit: jumlah baris terakh",
+      "id": "stocktrade_log_utils_rationale_104"
+    },
+    {
+      "label": "app.py",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1",
+      "community": 0,
+      "norm_label": "app.py",
+      "id": "app_py"
+    },
+    {
+      "label": "serve_assets()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L37",
+      "community": 0,
+      "norm_label": "serve_assets()",
+      "id": "stocktrade_app_serve_assets"
+    },
+    {
+      "label": "after_request()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L74",
+      "community": 0,
+      "norm_label": "after_request()",
+      "id": "stocktrade_app_after_request"
+    },
+    {
+      "label": "get_cache_file_path()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L80",
+      "community": 4,
+      "norm_label": "get_cache_file_path()",
+      "id": "stocktrade_app_get_cache_file_path"
+    },
+    {
+      "label": "get_fundamental_cache_file()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L86",
+      "community": 6,
+      "norm_label": "get_fundamental_cache_file()",
+      "id": "stocktrade_app_get_fundamental_cache_file"
+    },
+    {
+      "label": "get_screener_cache_file()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L92",
+      "community": 1,
+      "norm_label": "get_screener_cache_file()",
+      "id": "stocktrade_app_get_screener_cache_file"
+    },
+    {
+      "label": "load_cached_screener()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L98",
+      "community": 1,
+      "norm_label": "load_cached_screener()",
+      "id": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "label": "save_screener_to_cache()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L142",
+      "community": 1,
+      "norm_label": "save_screener_to_cache()",
+      "id": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "label": "create_extraction_marker()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L202",
+      "community": 0,
+      "norm_label": "create_extraction_marker()",
+      "id": "stocktrade_app_create_extraction_marker"
+    },
+    {
+      "label": "load_cached_fundamental()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L215",
+      "community": 6,
+      "norm_label": "load_cached_fundamental()",
+      "id": "stocktrade_app_load_cached_fundamental"
+    },
+    {
+      "label": "save_fundamental_to_cache()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L243",
+      "community": 6,
+      "norm_label": "save_fundamental_to_cache()",
+      "id": "stocktrade_app_save_fundamental_to_cache"
+    },
+    {
+      "label": "download_fundamental_data()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L265",
+      "community": 6,
+      "norm_label": "download_fundamental_data()",
+      "id": "stocktrade_app_download_fundamental_data"
+    },
+    {
+      "label": "load_cached_data()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L406",
+      "community": 4,
+      "norm_label": "load_cached_data()",
+      "id": "stocktrade_app_load_cached_data"
+    },
+    {
+      "label": "save_data_to_cache()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L461",
+      "community": 4,
+      "norm_label": "save_data_to_cache()",
+      "id": "stocktrade_app_save_data_to_cache"
+    },
+    {
+      "label": "download_stock_data()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L494",
+      "community": 4,
+      "norm_label": "download_stock_data()",
+      "id": "stocktrade_app_download_stock_data"
+    },
+    {
+      "label": "calculate_rsi()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L539",
+      "community": 0,
+      "norm_label": "calculate_rsi()",
+      "id": "stocktrade_app_calculate_rsi"
+    },
+    {
+      "label": "calculate_sl()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L562",
+      "community": 0,
+      "norm_label": "calculate_sl()",
+      "id": "stocktrade_app_calculate_sl"
+    },
+    {
+      "label": "calculate_bollinger_bands()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L597",
+      "community": 0,
+      "norm_label": "calculate_bollinger_bands()",
+      "id": "stocktrade_app_calculate_bollinger_bands"
+    },
+    {
+      "label": "index()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L612",
+      "community": 0,
+      "norm_label": "index()",
+      "id": "stocktrade_app_index"
+    },
+    {
+      "label": "refresh_data()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L618",
+      "community": 4,
+      "norm_label": "refresh_data()",
+      "id": "stocktrade_app_refresh_data"
+    },
+    {
+      "label": "analyze_stock()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L670",
+      "community": 0,
+      "norm_label": "analyze_stock()",
+      "id": "stocktrade_app_analyze_stock"
+    },
+    {
+      "label": "fetch_related_news()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L904",
+      "community": 0,
+      "norm_label": "fetch_related_news()",
+      "id": "stocktrade_app_fetch_related_news"
+    },
+    {
+      "label": "screener_most_active()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L978",
+      "community": 1,
+      "norm_label": "screener_most_active()",
+      "id": "stocktrade_app_screener_most_active"
+    },
+    {
+      "label": "screener_day_gainers()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1062",
+      "community": 1,
+      "norm_label": "screener_day_gainers()",
+      "id": "stocktrade_app_screener_day_gainers"
+    },
+    {
+      "label": "screener_net_net()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1140",
+      "community": 1,
+      "norm_label": "screener_net_net()",
+      "id": "stocktrade_app_screener_net_net"
+    },
+    {
+      "label": "screener_acquirers_multiple()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1218",
+      "community": 1,
+      "norm_label": "screener_acquirers_multiple()",
+      "id": "stocktrade_app_screener_acquirers_multiple"
+    },
+    {
+      "label": "screener_us_day_gainers()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1372",
+      "community": 1,
+      "norm_label": "screener_us_day_gainers()",
+      "id": "stocktrade_app_screener_us_day_gainers"
+    },
+    {
+      "label": "screener_us_net_net()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1448",
+      "community": 1,
+      "norm_label": "screener_us_net_net()",
+      "id": "stocktrade_app_screener_us_net_net"
+    },
+    {
+      "label": "extract_us_stocks()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1600",
+      "community": 3,
+      "norm_label": "extract_us_stocks()",
+      "id": "stocktrade_app_extract_us_stocks"
+    },
+    {
+      "label": "extract_id_stocks()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1715",
+      "community": 3,
+      "norm_label": "extract_id_stocks()",
+      "id": "stocktrade_app_extract_id_stocks"
+    },
+    {
+      "label": "extract_progress()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1830",
+      "community": 0,
+      "norm_label": "extract_progress()",
+      "id": "stocktrade_app_extract_progress"
+    },
+    {
+      "label": "extract_status()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1872",
+      "community": 3,
+      "norm_label": "extract_status()",
+      "id": "stocktrade_app_extract_status"
+    },
+    {
+      "label": "run_bb_screener()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L1906",
+      "community": 0,
+      "norm_label": "run_bb_screener()",
+      "id": "stocktrade_app_run_bb_screener"
+    },
+    {
+      "label": "screener_us_bb_breakout()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L2025",
+      "community": 1,
+      "norm_label": "screener_us_bb_breakout()",
+      "id": "stocktrade_app_screener_us_bb_breakout"
+    },
+    {
+      "label": "screener_bb_progress()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L2163",
+      "community": 0,
+      "norm_label": "screener_bb_progress()",
+      "id": "stocktrade_app_screener_bb_progress"
+    },
+    {
+      "label": "view_logs()",
+      "file_type": "code",
+      "source_file": "app.py",
+      "source_location": "L2204",
+      "community": 2,
+      "norm_label": "view_logs()",
+      "id": "stocktrade_app_view_logs"
+    },
+    {
+      "label": "Mendapatkan path file cache untuk ticker tertentu",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L81",
+      "community": 4,
+      "norm_label": "mendapatkan path file cache untuk ticker tertentu",
+      "id": "stocktrade_app_rationale_81"
+    },
+    {
+      "label": "Mendapatkan path file cache untuk data fundamental",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L87",
+      "community": 6,
+      "norm_label": "mendapatkan path file cache untuk data fundamental",
+      "id": "stocktrade_app_rationale_87"
+    },
+    {
+      "label": "Mendapatkan path file cache untuk data screener",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L93",
+      "community": 1,
+      "norm_label": "mendapatkan path file cache untuk data screener",
+      "id": "stocktrade_app_rationale_93"
+    },
+    {
+      "label": "Memuat data screener dari cache jika ada dan masih valid (maksimal 1 jam)     Me",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L99",
+      "community": 1,
+      "norm_label": "memuat data screener dari cache jika ada dan masih valid (maksimal 1 jam)     me",
+      "id": "stocktrade_app_rationale_99"
+    },
+    {
+      "label": "Menyimpan data screener ke cache dalam format CSV dengan metadata",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L143",
+      "community": 1,
+      "norm_label": "menyimpan data screener ke cache dalam format csv dengan metadata",
+      "id": "stocktrade_app_rationale_143"
+    },
+    {
+      "label": "Memeriksa apakah ekstraksi sudah dilakukan kurang dari RATE_LIMIT_MINUTES menit",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L171",
+      "community": 3,
+      "norm_label": "memeriksa apakah ekstraksi sudah dilakukan kurang dari rate_limit_minutes menit",
+      "id": "stocktrade_app_rationale_171"
+    },
+    {
+      "label": "Membuat marker file untuk tracking waktu ekstraksi terakhir.",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L203",
+      "community": 0,
+      "norm_label": "membuat marker file untuk tracking waktu ekstraksi terakhir.",
+      "id": "stocktrade_app_rationale_203"
+    },
+    {
+      "label": "Memuat data fundamental dari cache jika ada dan masih valid (maksimal 1 hari)",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L216",
+      "community": 6,
+      "norm_label": "memuat data fundamental dari cache jika ada dan masih valid (maksimal 1 hari)",
+      "id": "stocktrade_app_rationale_216"
+    },
+    {
+      "label": "Menyimpan data fundamental ke cache",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L244",
+      "community": 6,
+      "norm_label": "menyimpan data fundamental ke cache",
+      "id": "stocktrade_app_rationale_244"
+    },
+    {
+      "label": "Download data fundamental dari Yahoo Finance",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L266",
+      "community": 6,
+      "norm_label": "download data fundamental dari yahoo finance",
+      "id": "stocktrade_app_rationale_266"
+    },
+    {
+      "label": "Memuat data dari cache jika ada dan masih valid (maksimal 1 hari)     Mengembali",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L407",
+      "community": 4,
+      "norm_label": "memuat data dari cache jika ada dan masih valid (maksimal 1 hari)     mengembali",
+      "id": "stocktrade_app_rationale_407"
+    },
+    {
+      "label": "Menyimpan data ke cache dalam format CSV dengan metadata",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L462",
+      "community": 4,
+      "norm_label": "menyimpan data ke cache dalam format csv dengan metadata",
+      "id": "stocktrade_app_rationale_462"
+    },
+    {
+      "label": "Fungsi helper untuk download data dengan retry logic sederhana     force_refresh",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L495",
+      "community": 4,
+      "norm_label": "fungsi helper untuk download data dengan retry logic sederhana     force_refresh",
+      "id": "stocktrade_app_rationale_495"
+    },
+    {
+      "label": "Menghitung RSI menggunakan rumus standar",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L540",
+      "community": 0,
+      "norm_label": "menghitung rsi menggunakan rumus standar",
+      "id": "stocktrade_app_rationale_540"
+    },
+    {
+      "label": "Konversi logika Pine Script ke Python:     erof = atr_multiple * atr_period",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L563",
+      "community": 0,
+      "norm_label": "konversi logika pine script ke python:     erof = atr_multiple * atr_period",
+      "id": "stocktrade_app_rationale_563"
+    },
+    {
+      "label": "Menghitung Bollinger Bands     - Middle Band = SMA period hari     - Upper Band",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L598",
+      "community": 0,
+      "norm_label": "menghitung bollinger bands     - middle band = sma period hari     - upper band",
+      "id": "stocktrade_app_rationale_598"
+    },
+    {
+      "label": "Endpoint untuk refresh data - mendownload ulang data dari Yahoo Finance",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L619",
+      "community": 4,
+      "norm_label": "endpoint untuk refresh data - mendownload ulang data dari yahoo finance",
+      "id": "stocktrade_app_rationale_619"
+    },
+    {
+      "label": "Endpoint utama untuk menerima request, mendownload data,      menghitung RSI, me",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L671",
+      "community": 0,
+      "norm_label": "endpoint utama untuk menerima request, mendownload data,      menghitung rsi, me",
+      "id": "stocktrade_app_rationale_671"
+    },
+    {
+      "label": "Fetch related news from Google News dengan multiple languages dan regions",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L905",
+      "community": 0,
+      "norm_label": "fetch related news from google news dengan multiple languages dan regions",
+      "id": "stocktrade_app_rationale_905"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan data screener most active stocks Indonesia",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L979",
+      "community": 1,
+      "norm_label": "endpoint untuk mendapatkan data screener most active stocks indonesia",
+      "id": "stocktrade_app_rationale_979"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan data screener day gainers Indonesia",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1063",
+      "community": 1,
+      "norm_label": "endpoint untuk mendapatkan data screener day gainers indonesia",
+      "id": "stocktrade_app_rationale_1063"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan data screener net net strategy Indonesia",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1141",
+      "community": 1,
+      "norm_label": "endpoint untuk mendapatkan data screener net net strategy indonesia",
+      "id": "stocktrade_app_rationale_1141"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan data screener The Acquirers Multiple Indonesia",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1219",
+      "community": 1,
+      "norm_label": "endpoint untuk mendapatkan data screener the acquirers multiple indonesia",
+      "id": "stocktrade_app_rationale_1219"
+    },
+    {
+      "label": "Endpoint untuk mengekstrak data US stocks dari uslist.csv",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1601",
+      "community": 3,
+      "norm_label": "endpoint untuk mengekstrak data us stocks dari uslist.csv",
+      "id": "stocktrade_app_rationale_1601"
+    },
+    {
+      "label": "Endpoint untuk mengekstrak data ID stocks dari idlist.csv",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1716",
+      "community": 3,
+      "norm_label": "endpoint untuk mengekstrak data id stocks dari idlist.csv",
+      "id": "stocktrade_app_rationale_1716"
+    },
+    {
+      "label": "SSE endpoint untuk real-time progress extraction",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1831",
+      "community": 0,
+      "norm_label": "sse endpoint untuk real-time progress extraction",
+      "id": "stocktrade_app_rationale_1831"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan status extraction saat ini",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1873",
+      "community": 3,
+      "norm_label": "endpoint untuk mendapatkan status extraction saat ini",
+      "id": "stocktrade_app_rationale_1873"
+    },
+    {
+      "label": "Helper function untuk menjalankan BB screener pada watchlist",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L1907",
+      "community": 0,
+      "norm_label": "helper function untuk menjalankan bb screener pada watchlist",
+      "id": "stocktrade_app_rationale_1907"
+    },
+    {
+      "label": "Endpoint untuk mendapatkan data screener US BB Breakout",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L2026",
+      "community": 1,
+      "norm_label": "endpoint untuk mendapatkan data screener us bb breakout",
+      "id": "stocktrade_app_rationale_2026"
+    },
+    {
+      "label": "SSE endpoint untuk real-time progress BB screener",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L2164",
+      "community": 0,
+      "norm_label": "sse endpoint untuk real-time progress bb screener",
+      "id": "stocktrade_app_rationale_2164"
+    },
+    {
+      "label": "Halaman untuk melihat log activity dengan filter tanggal dan limit.",
+      "file_type": "rationale",
+      "source_file": "app.py",
+      "source_location": "L2205",
+      "community": 2,
+      "norm_label": "halaman untuk melihat log activity dengan filter tanggal dan limit.",
+      "id": "stocktrade_app_rationale_2205"
+    },
+    {
+      "label": "downloader.py",
+      "file_type": "code",
+      "source_file": "downloader.py",
+      "source_location": "L1",
+      "community": 3,
+      "norm_label": "downloader.py",
+      "id": "downloader_py"
+    },
+    {
+      "label": "check_rate_limit()",
+      "file_type": "code",
+      "source_file": "downloader.py",
+      "source_location": "L8",
+      "community": 3,
+      "norm_label": "check_rate_limit()",
+      "id": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "label": "get_last_date()",
+      "file_type": "code",
+      "source_file": "downloader.py",
+      "source_location": "L32",
+      "community": 3,
+      "norm_label": "get_last_date()",
+      "id": "stocktrade_downloader_get_last_date"
+    },
+    {
+      "label": "download_ticker_data()",
+      "file_type": "code",
+      "source_file": "downloader.py",
+      "source_location": "L49",
+      "community": 3,
+      "norm_label": "download_ticker_data()",
+      "id": "stocktrade_downloader_download_ticker_data"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "downloader.py",
+      "source_location": "L94",
+      "community": 3,
+      "norm_label": "main()",
+      "id": "stocktrade_downloader_main"
+    },
+    {
+      "label": "Memeriksa apakah ada file di folder output yang diupdate kurang dari threshold_m",
+      "file_type": "rationale",
+      "source_file": "downloader.py",
+      "source_location": "L9",
+      "community": 3,
+      "norm_label": "memeriksa apakah ada file di folder output yang diupdate kurang dari threshold_m",
+      "id": "stocktrade_downloader_rationale_9"
+    },
+    {
+      "label": "Membaca tanggal terakhir dari file CSV yang sudah ada.",
+      "file_type": "rationale",
+      "source_file": "downloader.py",
+      "source_location": "L33",
+      "community": 3,
+      "norm_label": "membaca tanggal terakhir dari file csv yang sudah ada.",
+      "id": "stocktrade_downloader_rationale_33"
+    },
+    {
+      "label": "settings.local.json",
+      "file_type": "code",
+      "source_file": ".claude/settings.local.json",
+      "source_location": "L1",
+      "community": 7,
+      "norm_label": "settings.local.json",
+      "id": "claude_settings_local_json"
+    },
+    {
+      "label": "permissions",
+      "file_type": "code",
+      "source_file": ".claude/settings.local.json",
+      "source_location": "L2",
+      "community": 7,
+      "norm_label": "permissions",
+      "id": "claude_settings_local_permissions"
+    },
+    {
+      "label": "allow",
+      "file_type": "code",
+      "source_file": ".claude/settings.local.json",
+      "source_location": "L3",
+      "community": 7,
+      "norm_label": "allow",
+      "id": "claude_settings_local_permissions_allow"
+    },
+    {
+      "label": "settings.json",
+      "file_type": "code",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L1",
+      "community": 8,
+      "norm_label": "settings.json",
+      "id": "vscode_settings_json"
+    },
+    {
+      "label": "python.defaultInterpreterPath",
+      "file_type": "code",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L2",
+      "community": 8,
+      "norm_label": "python.defaultinterpreterpath",
+      "id": "vscode_settings_python_defaultinterpreterpath"
+    },
+    {
+      "label": "CLAUDE.md",
+      "file_type": "document",
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "claude.md",
+      "id": "claude_md"
+    },
+    {
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "readme.md",
+      "id": "readme_md"
+    },
+    {
+      "label": "docker-compose.yml",
+      "file_type": "code",
+      "source_file": "docker-compose.yml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "docker-compose.yml",
+      "id": "docker_compose_yml"
+    },
+    {
+      "label": "CONFIG.md",
+      "file_type": "document",
+      "source_file": "CONFIG.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "config.md",
+      "id": "config_md"
+    },
+    {
+      "label": "requirements.txt",
+      "file_type": "code",
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "requirements.txt",
+      "id": "requirements_txt"
+    },
+    {
+      "label": "index.html",
+      "file_type": "code",
+      "source_file": "templates/index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "index.html",
+      "id": "index_html"
+    },
+    {
+      "label": "logs.html",
+      "file_type": "code",
+      "source_file": "templates/logs.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "logs.html",
+      "id": "logs_html"
+    },
+    {
+      "label": "Flask Backend",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "flask backend",
+      "id": "flask_backend"
+    },
+    {
+      "label": "Cache System",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "cache system",
+      "id": "cache_system"
+    },
+    {
+      "label": "yfinance API",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "yfinance api",
+      "id": "yfinance_api"
+    },
+    {
+      "label": "Logging System",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "logging system",
+      "id": "logging_system"
+    },
+    {
+      "label": "Nginx Reverse Proxy",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "nginx reverse proxy",
+      "id": "nginx_proxy"
+    },
+    {
+      "label": "2026-05-23-action-logging.md",
+      "file_type": "rationale",
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "2026-05-23-action-logging.md",
+      "id": "action_logging_md"
+    },
+    {
+      "label": "Frontend SPA",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 5,
+      "norm_label": "frontend spa",
+      "id": "frontend_spa"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_get_log_path"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_get_log_path_for_date"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_list_available_dates"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_get_client_ip"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "log_utils_py",
+      "target": "stocktrade_log_utils_read_recent_logs"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_1",
+      "target": "log_utils_py"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "action_logging_md",
+      "target": "log_utils_py"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_py",
+      "target": "log_utils_py"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "log_utils_py",
+      "target": "logging_system"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_log_action",
+      "target": "stocktrade_log_utils_get_log_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L114",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_read_recent_logs",
+      "target": "stocktrade_log_utils_get_log_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L112",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_read_recent_logs",
+      "target": "stocktrade_log_utils_get_log_path_for_date"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_25",
+      "target": "stocktrade_log_utils_get_log_path_for_date"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_31",
+      "target": "stocktrade_log_utils_list_available_dates"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L77",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_log_action",
+      "target": "stocktrade_log_utils_get_client_ip"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_46",
+      "target": "stocktrade_log_utils_get_client_ip"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_log_utils_get_client_ip"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_59",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1910",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_run_bb_screener",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L614",
+      "weight": 1.0,
+      "source": "stocktrade_app_index",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L633",
+      "weight": 1.0,
+      "source": "stocktrade_app_refresh_data",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L686",
+      "weight": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1307",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_most_active",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1073",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_day_gainers",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1151",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_net_net",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1535",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_acquirers_multiple",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1383",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_us_day_gainers",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1459",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_us_net_net",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1611",
+      "weight": 1.0,
+      "source": "stocktrade_app_extract_us_stocks",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L1726",
+      "weight": 1.0,
+      "source": "stocktrade_app_extract_id_stocks",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L2105",
+      "weight": 1.0,
+      "source": "stocktrade_app_screener_us_bb_breakout",
+      "target": "stocktrade_log_utils_log_action"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "log_utils.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_log_utils_rationale_104",
+      "target": "stocktrade_log_utils_read_recent_logs"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_log_utils_read_recent_logs"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.py",
+      "source_location": "L2219",
+      "weight": 1.0,
+      "source": "stocktrade_app_view_logs",
+      "target": "stocktrade_log_utils_read_recent_logs"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_serve_assets"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_after_request"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L80",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_get_cache_file_path"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_get_fundamental_cache_file"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L92",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_get_screener_cache_file"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L98",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L142",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L170",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L202",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_create_extraction_marker"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L215",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_load_cached_fundamental"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L243",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_save_fundamental_to_cache"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L265",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_download_fundamental_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L406",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_load_cached_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L461",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_save_data_to_cache"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L494",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_download_stock_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L539",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_calculate_rsi"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L562",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_calculate_sl"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L597",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_calculate_bollinger_bands"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L612",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_index"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L618",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_refresh_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L670",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_analyze_stock"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L904",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_fetch_related_news"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1296",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_most_active"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1062",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_day_gainers"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1140",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_net_net"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1524",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_acquirers_multiple"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1372",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_us_day_gainers"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1448",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_us_net_net"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1600",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_extract_us_stocks"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1715",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_extract_id_stocks"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1830",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_extract_progress"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1872",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_extract_status"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1906",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_run_bb_screener"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2094",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_us_bb_breakout"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2163",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_screener_bb_progress"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2204",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_py",
+      "target": "stocktrade_app_view_logs"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "claude_md",
+      "target": "app_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_md",
+      "target": "app_py"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "requirements_txt",
+      "target": "app_py"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "action_logging_md",
+      "target": "app_py"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_py",
+      "target": "flask_backend"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_py",
+      "target": "cache_system"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_py",
+      "target": "yfinance_api"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L411",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_load_cached_data",
+      "target": "stocktrade_app_get_cache_file_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L465",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_save_data_to_cache",
+      "target": "stocktrade_app_get_cache_file_path"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_81",
+      "target": "stocktrade_app_get_cache_file_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L219",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_load_cached_fundamental",
+      "target": "stocktrade_app_get_fundamental_cache_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L247",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_save_fundamental_to_cache",
+      "target": "stocktrade_app_get_fundamental_cache_file"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_87",
+      "target": "stocktrade_app_get_fundamental_cache_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_load_cached_screener",
+      "target": "stocktrade_app_get_screener_cache_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L146",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_save_screener_to_cache",
+      "target": "stocktrade_app_get_screener_cache_file"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L93",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_93",
+      "target": "stocktrade_app_get_screener_cache_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1311",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_most_active",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1077",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_day_gainers",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1155",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_net_net",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1539",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_acquirers_multiple",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1387",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_day_gainers",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1463",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_net_net",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2110",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_bb_breakout",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L99",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_99",
+      "target": "stocktrade_app_load_cached_screener"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1357",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_most_active",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1125",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_day_gainers",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1203",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_net_net",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1585",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_acquirers_multiple",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1433",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_day_gainers",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1509",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_net_net",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2140",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_bb_breakout",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L143",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_143",
+      "target": "stocktrade_app_save_screener_to_cache"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L203",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_203",
+      "target": "stocktrade_app_create_extraction_marker"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L271",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_download_fundamental_data",
+      "target": "stocktrade_app_load_cached_fundamental"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_216",
+      "target": "stocktrade_app_load_cached_fundamental"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L398",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_download_fundamental_data",
+      "target": "stocktrade_app_save_fundamental_to_cache"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L244",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_244",
+      "target": "stocktrade_app_save_fundamental_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L845",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_app_download_fundamental_data"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L266",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_266",
+      "target": "stocktrade_app_download_fundamental_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L502",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_download_stock_data",
+      "target": "stocktrade_app_load_cached_data"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L407",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_407",
+      "target": "stocktrade_app_load_cached_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L520",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_download_stock_data",
+      "target": "stocktrade_app_save_data_to_cache"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L462",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_462",
+      "target": "stocktrade_app_save_data_to_cache"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L641",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_refresh_data",
+      "target": "stocktrade_app_download_stock_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L697",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_app_download_stock_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1937",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_run_bb_screener",
+      "target": "stocktrade_app_download_stock_data"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L495",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_495",
+      "target": "stocktrade_app_download_stock_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L755",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_app_calculate_rsi"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L540",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_540",
+      "target": "stocktrade_app_calculate_rsi"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L774",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_app_calculate_sl"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1960",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_run_bb_screener",
+      "target": "stocktrade_app_calculate_sl"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L563",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_563",
+      "target": "stocktrade_app_calculate_sl"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1961",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_run_bb_screener",
+      "target": "stocktrade_app_calculate_bollinger_bands"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L598",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_598",
+      "target": "stocktrade_app_calculate_bollinger_bands"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L619",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_619",
+      "target": "stocktrade_app_refresh_data"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L851",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_analyze_stock",
+      "target": "stocktrade_app_fetch_related_news"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L671",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_671",
+      "target": "stocktrade_app_analyze_stock"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L905",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_905",
+      "target": "stocktrade_app_fetch_related_news"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1297",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_979",
+      "target": "stocktrade_app_screener_most_active"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1063",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1063",
+      "target": "stocktrade_app_screener_day_gainers"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1141",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1141",
+      "target": "stocktrade_app_screener_net_net"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1525",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1219",
+      "target": "stocktrade_app_screener_acquirers_multiple"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1373",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1063",
+      "target": "stocktrade_app_screener_us_day_gainers"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1449",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1063",
+      "target": "stocktrade_app_screener_us_net_net"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1617",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_extract_us_stocks",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1601",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1601",
+      "target": "stocktrade_app_extract_us_stocks"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1732",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_extract_id_stocks",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1716",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1716",
+      "target": "stocktrade_app_extract_id_stocks"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1831",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1831",
+      "target": "stocktrade_app_extract_progress"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1886",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_extract_status",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1873",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1873",
+      "target": "stocktrade_app_extract_status"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2136",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_screener_us_bb_breakout",
+      "target": "stocktrade_app_run_bb_screener"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L1907",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_1907",
+      "target": "stocktrade_app_run_bb_screener"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2095",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_2026",
+      "target": "stocktrade_app_screener_us_bb_breakout"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2164",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_2164",
+      "target": "stocktrade_app_screener_bb_progress"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L2205",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_2205",
+      "target": "stocktrade_app_view_logs"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app.py",
+      "source_location": "L171",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_app_rationale_171",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "downloader_py",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "downloader_py",
+      "target": "stocktrade_downloader_get_last_date"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L49",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "downloader_py",
+      "target": "stocktrade_downloader_download_ticker_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "downloader_py",
+      "target": "stocktrade_downloader_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_downloader_main",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_downloader_rationale_9",
+      "target": "stocktrade_downloader_check_rate_limit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_downloader_download_ticker_data",
+      "target": "stocktrade_downloader_get_last_date"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_downloader_rationale_33",
+      "target": "stocktrade_downloader_get_last_date"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "downloader.py",
+      "source_location": "L125",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "stocktrade_downloader_main",
+      "target": "stocktrade_downloader_download_ticker_data"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/settings.local.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "claude_settings_local_json",
+      "target": "claude_settings_local_permissions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/settings.local.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "claude_settings_local_permissions",
+      "target": "claude_settings_local_permissions_allow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".vscode/settings.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "vscode_settings_json",
+      "target": "vscode_settings_python_defaultinterpreterpath"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "claude_md",
+      "target": "index_html"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "claude_md",
+      "target": "config_md"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_md",
+      "target": "index_html"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_md",
+      "target": "config_md"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "readme_md",
+      "target": "docker_compose_yml"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docker-compose.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docker_compose_yml",
+      "target": "nginx_proxy"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docker-compose.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docker_compose_yml",
+      "target": "flask_backend"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docker-compose.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "docker_compose_yml",
+      "target": "cache_system"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CONFIG.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "config_md",
+      "target": "flask_backend"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "requirements.txt",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "requirements_txt",
+      "target": "yfinance_api"
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "templates/index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html",
+      "target": "flask_backend"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "templates/index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html",
+      "target": "frontend_spa"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "action_logging_md",
+      "target": "logs_html"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "templates/logs.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "logs_html",
+      "target": "logging_system"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docker-compose.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "nginx_proxy",
+      "target": "flask_backend"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "flask_backend",
+      "target": "frontend_spa"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "flask_backend",
+      "target": "cache_system"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "flask_backend",
+      "target": "yfinance_api"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/plans/2026-05-23-action-logging.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "flask_backend",
+      "target": "logging_system"
+    }
+  ],
+  "hyperedges": []
+}
