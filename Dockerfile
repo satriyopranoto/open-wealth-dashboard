@@ -21,8 +21,8 @@ COPY uslist.csv idlist.csv ./
 COPY templates/ templates/
 COPY assets/ assets/
 
-# Cache dir; akan di-override oleh bind-mount saat docker compose up
-RUN mkdir -p cache
+# Cache & logs dirs; akan di-override oleh bind-mount saat docker compose up
+RUN mkdir -p cache logs
 
 EXPOSE 5000
 

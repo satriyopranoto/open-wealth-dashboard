@@ -393,7 +393,96 @@ def download_fundamental_data(ticker, force_refresh=False):
             print(f"✓ Company description untuk {ticker} ditemukan (panjang: {len(fundamental['company_description'])} karakter)")
         else:
             print(f"⚠ Company description untuk {ticker} tidak tersedia dari Yahoo Finance")
-        
+
+        # Ambil Events (Earnings, Dividends, Splits)
+        try:
+            events_data = {'earnings': [], 'dividends': [], 'splits': []}
+
+            # --- Earnings: pakai earnings_dates (lebih reliable dari ticker.events) ---
+            try:
+                earnings_df = stock.earnings_dates
+                if earnings_df is not None and not earnings_df.empty:
+                    for idx, row in earnings_df.head(8).iterrows():
+                        try:
+                            date_str = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+                            eps_est = eps_actual = eps_surprise = None
+                            for col in row.index:
+                                cl = col.lower()
+                                val = row[col]
+                                if not pd.notna(val):
+                                    continue
+                                if 'estimate' in cl:
+                                    eps_est = float(val)
+                                elif 'reported' in cl or ('eps' in cl and 'estimate' not in cl and 'surprise' not in cl):
+                                    eps_actual = float(val)
+                                elif 'surprise' in cl or '%' in cl:
+                                    eps_surprise = float(val)
+                            events_data['earnings'].append({
+                                'date': date_str,
+                                'eps_estimate': eps_est,
+                                'eps_actual': eps_actual,
+                                'eps_surprise_pct': eps_surprise,
+                            })
+                        except Exception:
+                            continue
+            except Exception as e:
+                print(f"⚠ earnings_dates error: {e}")
+
+            # Fallback ke ticker.events['Earnings'] jika earnings_dates kosong
+            if not events_data['earnings']:
+                try:
+                    raw_events = stock.events
+                    if raw_events is not None:
+                        ef = raw_events.get('Earnings')
+                        if ef is not None and not ef.empty:
+                            for idx, row in ef.iterrows():
+                                try:
+                                    date_str = idx.isoformat() if hasattr(idx, 'isoformat') else str(idx)
+                                    events_data['earnings'].append({
+                                        'date': date_str,
+                                        'eps_estimate': float(row['EPS Estimate']) if 'EPS Estimate' in row and pd.notna(row['EPS Estimate']) else None,
+                                        'eps_actual': float(row['EPS Actual']) if 'EPS Actual' in row and pd.notna(row['EPS Actual']) else None,
+                                        'eps_surprise_pct': float(row['EPSSurprisePct']) if 'EPSSurprisePct' in row and pd.notna(row['EPSSurprisePct']) else None,
+                                    })
+                                except Exception:
+                                    continue
+                except Exception as e:
+                    print(f"⚠ ticker.events earnings fallback error: {e}")
+
+            # --- Dividends & Splits dari ticker.events ---
+            try:
+                raw_events = stock.events
+                if raw_events is not None:
+                    divs = raw_events.get('Dividends')
+                    if divs is not None and len(divs) > 0:
+                        for date_idx, amount in divs.items():
+                            try:
+                                events_data['dividends'].append({
+                                    'date': date_idx.isoformat() if hasattr(date_idx, 'isoformat') else str(date_idx),
+                                    'amount': float(amount) if pd.notna(amount) else None,
+                                })
+                            except Exception:
+                                continue
+
+                    splits = raw_events.get('Splits')
+                    if splits is not None and len(splits) > 0:
+                        for date_idx, ratio in splits.items():
+                            try:
+                                events_data['splits'].append({
+                                    'date': date_idx.isoformat() if hasattr(date_idx, 'isoformat') else str(date_idx),
+                                    'ratio': float(ratio) if pd.notna(ratio) else None,
+                                })
+                            except Exception:
+                                continue
+            except Exception as e:
+                print(f"⚠ ticker.events div/splits error: {e}")
+
+            fundamental['events'] = events_data
+            print(f"✓ Events {ticker}: {len(events_data['earnings'])} earnings, {len(events_data['dividends'])} dividends, {len(events_data['splits'])} splits")
+        except Exception as e:
+            print(f"⚠ Error mengambil events: {str(e)}")
+            fundamental['events'] = {'earnings': [], 'dividends': [], 'splits': []}
+
         # Simpan ke cache
         save_fundamental_to_cache(ticker, fundamental)
         
@@ -886,7 +975,8 @@ def analyze_stock():
                 "peg_ratio": fundamental_data.get('peg_ratio'),
                 "company_description": fundamental_data.get('company_description'),
                 "major_holders": fundamental_data.get('major_holders', []),
-                "institutional_holders": fundamental_data.get('institutional_holders', [])
+                "institutional_holders": fundamental_data.get('institutional_holders', []),
+                "events": fundamental_data.get('events', {'earnings': [], 'dividends': [], 'splits': []})
             }
         })
 
