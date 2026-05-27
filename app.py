@@ -95,9 +95,23 @@ def get_screener_cache_file(screener_name):
     """
     return os.path.join(CACHE_DIR, f"screener_{screener_name}.csv")
 
-def load_cached_screener(screener_name):
+def get_last_extraction_time(list_name):
     """
-    Memuat data screener dari cache jika ada dan masih valid (maksimal 1 jam)
+    Mengembalikan mtime marker file ekstraksi terakhir, atau None jika belum pernah.
+    """
+    marker_file = os.path.join(CACHE_DIR, f".extraction_{list_name}_marker.txt")
+    if os.path.exists(marker_file):
+        return os.path.getmtime(marker_file)
+    return None
+
+def load_cached_screener(screener_name, extraction_list_name=None):
+    """
+    Memuat data screener dari cache jika ada dan masih valid.
+    
+    Jika extraction_list_name diberikan, cache dianggap valid hanya jika
+    timestamp cache > timestamp marker file ekstraksi terakhir.
+    Jika tidak, gunakan TTL 1 jam (perilaku lama untuk screener non-BB).
+    
     Mengembalikan tuple (data, metadata, error)
     """
     cache_file = get_screener_cache_file(screener_name)
@@ -119,18 +133,30 @@ def load_cached_screener(screener_name):
             return None, None, None
         
         metadata = json.loads(metadata_line[1:].strip())
+        cache_mtime = os.path.getmtime(cache_file)
         
-        cached_time = datetime.fromisoformat(metadata['timestamp'])
-        age = datetime.now() - cached_time
-        
-        if age.total_seconds() > 1 * 60 * 60:
-            print(f"Cache screener untuk {screener_name} sudah kadaluarsa ({age.total_seconds() / 3600:.1f} jam yang lalu)")
-            return None, None, None
+        if extraction_list_name:
+            extraction_time = get_last_extraction_time(extraction_list_name)
+            if extraction_time is None:
+                print(f"Tidak ada marker ekstraksi untuk {extraction_list_name}, cache dianggap basi")
+                return None, None, None
+            if cache_mtime <= extraction_time:
+                print(f"Cache screener {screener_name} lebih lama dari ekstraksi terakhir, jalankan ulang")
+                return None, None, None
+            print(f"Data screener {screener_name} dimuat dari cache (lebih baru dari ekstraksi)")
+        else:
+            cached_time = datetime.fromisoformat(metadata['timestamp'])
+            age = datetime.now() - cached_time
+            
+            if age.total_seconds() > 1 * 60 * 60:
+                print(f"Cache screener untuk {screener_name} sudah kadaluarsa ({age.total_seconds() / 3600:.1f} jam yang lalu)")
+                return None, None, None
+            
+            print(f"Data screener {screener_name} dimuat dari cache (usia: {age.total_seconds() / 3600:.1f} jam)")
         
         csv_content = ''.join(lines[1:])
         data = pd.read_csv(io.StringIO(csv_content))
         
-        print(f"Data screener {screener_name} dimuat dari cache (usia: {age.total_seconds() / 3600:.1f} jam)")
         return data, metadata, None
         
     except Exception as e:
@@ -2128,7 +2154,7 @@ def screener_us_bb_breakout():
     
     global bb_screener_progress
     
-    cached_data, metadata, error = load_cached_screener('us-bb-breakout')
+    cached_data, metadata, error = load_cached_screener('us-bb-breakout', 'uslist')
     if cached_data is not None:
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
@@ -2197,7 +2223,7 @@ def screener_id_bb_breakout():
     
     global bb_screener_progress
     
-    cached_data, metadata, error = load_cached_screener('id-bb-breakout')
+    cached_data, metadata, error = load_cached_screener('id-bb-breakout', 'idlist')
     if cached_data is not None:
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
