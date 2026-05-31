@@ -1004,7 +1004,7 @@
                 element.classList.remove('positive', 'negative');
             } else {
                 if (isPercentage) {
-                    const percentValue = (value).toFixed(2);
+                    const percentValue = (value * 100).toFixed(2);
                     element.textContent = `${percentValue}%`;
                     element.className = 'value ' + (value >= 0 ? 'positive' : 'negative');
                 } else {

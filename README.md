@@ -122,20 +122,29 @@ View logs in-browser at `/logs?date=2026-05-23&limit=50`. Date picker and limit 
 **Prerequisite:** Docker Desktop installed and running.
 
 ```bash
-# Build image dan jalankan container
+# Build dan run containers
 docker compose up --build
 
 # Akses di browser
 http://localhost:5000
 
-# Jalankan di background
-docker compose up --build -d
+# Run di background (detached)
+docker compose up -d
 
-# Stop
+# Stop containers
 docker compose down
+
+# View logs
+docker compose logs -f          # all services
+docker compose logs -f app      # app only
+docker compose logs -f nginx    # nginx only
+
+# Rebuild tanpa cache
+docker compose build --no-cache
+docker compose up
 ```
 
-Folder `cache/` di-mount sebagai bind-mount ke host — data cache tetap ada meski container di-restart atau dihapus.
+**Persistent data:** Folder `cache/` dan `logs/` di-mount sebagai bind-mount ke host — data tetap ada meski container di-restart atau dihapus.
 
 **Akses dari device lain di jaringan lokal**, edit `API_BASE_URL` di `docker-compose.yml`:
 ```yaml
@@ -143,6 +152,11 @@ environment:
   - API_BASE_URL=http://<IP-komputer-kamu>:5000
 ```
 Lalu rebuild: `docker compose up --build`.
+
+**Troubleshooting:**
+- **Port 5000 sudah digunakan:** Edit port mapping di `docker-compose.yml` (e.g., `8080:80`)
+- **Cache/logs tidak persist:** Pastikan folder ada: `mkdir -p cache logs`
+- **Permission issues (WSL):** `sudo chown -R $USER:$USER cache logs`
 
 ---
 
