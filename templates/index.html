@@ -340,6 +340,14 @@
 <div class="data-label mb-1">PEG Ratio</div>
 <div class="value text-lg" id="peg-ratio">-</div>
 </div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">PE Fair Price</div>
+<div class="value text-lg" id="fair-price-pe">-</div>
+</div>
+<div class="fundamental-item p-4 rounded-sm bg-black/20">
+<div class="data-label mb-1">DCF Fair Price</div>
+<div class="value text-lg" id="fair-price-dcf">-</div>
+</div>
 </div>
 </div>
 <!-- Lot Size Calculator -->
@@ -941,6 +949,8 @@
                         setFundamentalValue('eps-growth', data.fundamental.eps_growth, true);
                         setFundamentalValue('trailing-pe', data.fundamental.trailing_pe, false);
                         setFundamentalValue('peg-ratio', data.fundamental.peg_ratio, false);
+                        setFairPriceValue('fair-price-pe',  data.fundamental.fair_price_pe,  data.last_price);
+                        setFairPriceValue('fair-price-dcf', data.fundamental.fair_price_dcf, data.last_price);
                         
                         displayHolders('major-holders', data.fundamental.major_holders);
                         displayHolders('institutional-holders', data.fundamental.institutional_holders);
@@ -995,6 +1005,17 @@
             const imgTag = document.getElementById('stock-chart-img');
             imgTag.src = "data:image/png;base64," + base64Image;
             imgTag.classList.remove('hidden');
+        }
+
+        function setFairPriceValue(elementId, fairPrice, currentPrice) {
+            const el = document.getElementById(elementId);
+            if (fairPrice === null || fairPrice === undefined || isNaN(fairPrice)) {
+                el.textContent = 'N/A';
+                el.className = 'value text-lg';
+            } else {
+                el.textContent = fairPrice.toFixed(2);
+                el.className = 'value text-lg ' + (fairPrice > currentPrice ? 'positive' : 'negative');
+            }
         }
 
         function setFundamentalValue(elementId, value, isPercentage) {

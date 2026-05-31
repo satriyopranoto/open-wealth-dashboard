@@ -321,6 +321,40 @@ def download_fundamental_data(ticker, force_refresh=False):
             'peg_ratio': info.get('pegRatio'),
             'company_description': info.get('longBusinessSummary')
         }
+
+        # PE-based fair price: forwardEps * trailingPE
+        # Menjawab: "jika laba tumbuh sesuai proyeksi analis dan multiple PE tetap, berapa target harganya?"
+        forward_eps = info.get('forwardEps')
+        pe_current  = info.get('trailingPE')
+        if forward_eps and pe_current:
+            fundamental['fair_price_pe'] = forward_eps * pe_current
+        else:
+            fundamental['fair_price_pe'] = None
+
+        # DCF-based fair price: 5-year FCF projection + terminal value
+        try:
+            cash_flow = stock.cashflow
+            idx = cash_flow.index
+            # Use Free Cash Flow directly if available, otherwise compute from components
+            if 'Free Cash Flow' in idx:
+                fcf = cash_flow.loc['Free Cash Flow'].iloc[0]
+            else:
+                op_cf = cash_flow.loc['Operating Cash Flow'].iloc[0]
+                capex_key = 'Capital Expenditure' if 'Capital Expenditure' in idx else 'Capital Expenditures'
+                capex = abs(cash_flow.loc[capex_key].iloc[0])
+                fcf = op_cf - capex
+            shares = info.get('sharesOutstanding')
+            g      = max(info.get('earningsGrowth') or 0.10, 0.0)
+            r, gn  = 0.12, 0.04
+            total_pv, fcf_proj = 0, fcf
+            for t in range(1, 6):
+                fcf_proj *= (1 + g)
+                total_pv += fcf_proj / ((1 + r) ** t)
+            tv    = (fcf_proj * (1 + gn)) / (r - gn)
+            pv_tv = tv / ((1 + r) ** 5)
+            fundamental['fair_price_dcf'] = (total_pv + pv_tv) / shares if shares else None
+        except Exception:
+            fundamental['fair_price_dcf'] = None
         
         # Ambil Major Holders
         try:
@@ -999,6 +1033,8 @@ def analyze_stock():
                 "eps_growth": fundamental_data.get('eps_growth'),
                 "trailing_pe": fundamental_data.get('trailing_pe'),
                 "peg_ratio": fundamental_data.get('peg_ratio'),
+                "fair_price_pe": fundamental_data.get('fair_price_pe'),
+                "fair_price_dcf": fundamental_data.get('fair_price_dcf'),
                 "company_description": fundamental_data.get('company_description'),
                 "major_holders": fundamental_data.get('major_holders', []),
                 "institutional_holders": fundamental_data.get('institutional_holders', []),
