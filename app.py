@@ -1840,7 +1840,7 @@ def extract_us_stocks():
             # Create rate limit marker for next extraction
             create_extraction_marker(uslist_path)
         
-        thread = threading.Thread(target=run_us_extraction, daemon=False)
+        thread = threading.Thread(target=run_us_extraction, daemon=True)
         print(f"[EXTRACT/US] Creating extraction thread", flush=True)
         thread.start()
         print(f"[EXTRACT/US] Thread started successfully", flush=True)
@@ -1955,7 +1955,7 @@ def extract_id_stocks():
             # Create rate limit marker for next extraction
             create_extraction_marker(idlist_path)
         
-        thread = threading.Thread(target=run_id_extraction, daemon=False)
+        thread = threading.Thread(target=run_id_extraction, daemon=True)
         print(f"[EXTRACT/ID] Creating extraction thread", flush=True)
         thread.start()
         print(f"[EXTRACT/ID] Thread started successfully", flush=True)
