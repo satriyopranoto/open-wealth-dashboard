@@ -331,27 +331,66 @@ def download_fundamental_data(ticker, force_refresh=False):
         else:
             fundamental['fair_price_pe'] = None
 
-        # DCF-based fair price: 5-year FCF projection + terminal value
+        # DCF-based fair price: dynamic WACC + 3-year avg FCF projection + terminal value
         try:
             cash_flow = stock.cashflow
+            balance_sheet = stock.balance_sheet if hasattr(stock, 'balance_sheet') else getattr(stock, 'balancesheet', None)
+            income_statement = stock.income_stmt if hasattr(stock, 'income_stmt') else getattr(stock, 'income_statement', None)
+
+            if cash_flow is None or cash_flow.empty or balance_sheet is None or balance_sheet.empty or income_statement is None or income_statement.empty:
+                raise ValueError("Incomplete financial data for DCF")
+
             idx = cash_flow.index
-            # Use Free Cash Flow directly if available, otherwise compute from components
+
+            # --- 3-year average Free Cash Flow ---
             if 'Free Cash Flow' in idx:
-                fcf = cash_flow.loc['Free Cash Flow'].iloc[0]
-            else:
-                op_cf = cash_flow.loc['Operating Cash Flow'].iloc[0]
+                fcf_series = cash_flow.loc['Free Cash Flow'].iloc[:3]
+            elif 'Operating Cash Flow' in idx:
                 capex_key = 'Capital Expenditure' if 'Capital Expenditure' in idx else 'Capital Expenditures'
-                capex = abs(cash_flow.loc[capex_key].iloc[0])
-                fcf = op_cf - capex
+                ocf_series = cash_flow.loc['Operating Cash Flow'].iloc[:3]
+                capex_series = abs(cash_flow.loc[capex_key].iloc[:3])
+                fcf_series = ocf_series - capex_series
+            else:
+                raise KeyError("Neither 'Free Cash Flow' nor 'Operating Cash Flow' found in cash flow statement")
+            avg_fcf = fcf_series.mean()
+
+            # --- Dynamic WACC ---
+            beta = info.get('beta', 1.0)
+            market_cap = info.get('marketCap', 0)
+
+            risk_free_rate = 0.065
+            market_risk_premium = 0.055
+            terminal_growth = 0.04
+
+            cost_of_equity = risk_free_rate + (beta * market_risk_premium)
+
+            total_debt = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
+            interest_expense = abs(income_statement.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_statement.index else 0
+            tax_provision = income_statement.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_statement.index else 0
+            pretax_income = income_statement.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_statement.index else 0
+
+            cost_of_debt = interest_expense / total_debt if total_debt > 0 else 0
+            tax_rate = tax_provision / pretax_income if pretax_income > 0 else 0
+
+            total_capital = market_cap + total_debt
+            weight_of_equity = market_cap / total_capital if total_capital > 0 else 1
+            weight_of_debt = total_debt / total_capital if total_capital > 0 else 0
+
+            wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+
             shares = info.get('sharesOutstanding')
-            g      = max(info.get('earningsGrowth') or 0.10, 0.0)
-            r, gn  = 0.12, 0.04
-            total_pv, fcf_proj = 0, fcf
+            g = max(info.get('earningsGrowth') or 0.10, 0.0)
+            gn = terminal_growth
+
+            total_pv = 0
+            fcf_proj = avg_fcf
             for t in range(1, 6):
                 fcf_proj *= (1 + g)
-                total_pv += fcf_proj / ((1 + r) ** t)
-            tv    = (fcf_proj * (1 + gn)) / (r - gn)
-            pv_tv = tv / ((1 + r) ** 5)
+                total_pv += fcf_proj / ((1 + wacc) ** t)
+
+            tv = (fcf_proj * (1 + gn)) / (wacc - gn)
+            pv_tv = tv / ((1 + wacc) ** 5)
+
             fundamental['fair_price_dcf'] = (total_pv + pv_tv) / shares if shares else None
         except Exception:
             fundamental['fair_price_dcf'] = None
