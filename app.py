@@ -2141,6 +2141,7 @@ def extract_progress():
     def generate():
         import math
         last_progress = None
+        idle_loops = 0
         
         while True:
             global extraction_progress
@@ -2473,6 +2474,7 @@ def screener_bb_progress():
     
     def generate():
         last_progress = None
+        idle_loops = 0
         
         while True:
             global bb_screener_progress
@@ -2803,6 +2805,7 @@ def screener_fundamental_progress():
     
     def generate():
         last_progress = None
+        idle_loops = 0
         
         while True:
             global fundamental_screener_progress
@@ -2823,6 +2826,15 @@ def screener_fundamental_progress():
             
             if fundamental_screener_progress['status'] in ['completed', 'error']:
                 break
+            
+            # Safety: kalo idle > 30 detik, tutup SSE
+            if fundamental_screener_progress['status'] == 'idle':
+                idle_loops += 1
+                if idle_loops > 30:
+                    yield 'data: {"status": "timeout", "message": "No active screener"}' + chr(92)*2 + 'n' + chr(92)*2 + 'n'
+                    break
+            else:
+                idle_loops = 0
             
             time.sleep(1)
     
