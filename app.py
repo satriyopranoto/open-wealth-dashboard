@@ -2530,8 +2530,8 @@ def run_fundamental_screener(list_path, list_type):
             fundamental_screener_progress['message'] = f'Analyzing {ticker}...'
             
             try:
-                # Ambil data fundamental (force_refresh=True agar data ter-update)
-                fundamental_data, err = download_fundamental_data(ticker, force_refresh=True)
+                # Ambil data fundamental (pake cache 24 jam, jangan paksa refresh tiap kali)
+                fundamental_data, err = download_fundamental_data(ticker, force_refresh=False)
                 
                 # Cek harga terakhir -- baca langsung dari cache CSV, jangan overwrite
                 current_price = None
@@ -2583,12 +2583,12 @@ def run_fundamental_screener(list_path, list_type):
                 # 3. operating cash flow > 0
                 c3 = ocf is not None and ocf > 0
                 
-                # 4. debt to equity ratio < 2
+                # 4. debt to equity ratio < 2 (dalam desimal, misal 0.8 = 80%)
                 c4 = False
                 debt_to_equity_ratio = None
                 if debt_to_equity is not None:
-                    debt_to_equity_ratio = debt_to_equity / 100.0 if debt_to_equity > 10 else debt_to_equity
-                    c4 = debt_to_equity_ratio < 2
+                    debt_to_equity_ratio = debt_to_equity
+                    c4 = debt_to_equity_ratio < 2.0
                 
                 # 5. PE Fair Value > current price
                 c5 = fair_price_pe is not None and fair_price_pe > current_price_clean
@@ -2625,7 +2625,8 @@ def run_fundamental_screener(list_path, list_type):
                 fundamental_screener_progress['message'] = f'{ticker}: Error'
                 continue
             
-            time.sleep(0.5)
+            # Gak perlu sleep karena pake cache (bukan API call)
+            time.sleep(0.05)  # minimal delay biar UI progress sempat update
             
         fundamental_screener_progress['status'] = 'completed'
         fundamental_screener_progress['message'] = f'Fundamental Screener completed: {len(fundamental_screener_progress["results"])} stocks analyzed'
