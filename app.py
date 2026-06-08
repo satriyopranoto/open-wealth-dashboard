@@ -360,6 +360,10 @@ def load_cached_fundamental(ticker):
             for key in list(data.keys()):
                 if isinstance(data[key], float):
                     data[key] = clean_float(data[key])
+        # Safety net: pastiin long_term_debt_to_equity dalam format desimal
+        if 'long_term_debt_to_equity' in data and data['long_term_debt_to_equity'] is not None:
+            if data['long_term_debt_to_equity'] > 1.0:
+                data['long_term_debt_to_equity'] = round(data['long_term_debt_to_equity'] / 100.0, 6)
         return data, None
         
     except Exception as e:
