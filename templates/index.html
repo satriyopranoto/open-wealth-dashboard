@@ -147,6 +147,8 @@
 </button>
 <div class="absolute left-0 mt-2 w-64 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
 <div class="p-2 flex flex-col">
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-fundamental'); return false;">US Fundamental Screener</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('id-fundamental'); return false;">ID Fundamental Screener</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-most-active'); return false;">US Most Active Stocks</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('most-active'); return false;">ID Most Active Stocks</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5" href="#" onclick="loadScreener('us-day-gainers'); return false;">US Day Gainers</a>
@@ -532,6 +534,12 @@
             } else if (type === 'id-bb-breakout') {
                 endpoint = '/screener/id-bb-breakout';
                 titleText = 'ID BB Breakout Screener';
+            } else if (type === 'us-fundamental') {
+                endpoint = '/screener/us-fundamental';
+                titleText = 'US Fundamental Screener';
+            } else if (type === 'id-fundamental') {
+                endpoint = '/screener/id-fundamental';
+                titleText = 'ID Fundamental Screener';
             }
 
             statusDiv.textContent = 'LOADING SCREENER DATA...';
@@ -540,12 +548,12 @@
             screenerResults.classList.add('hidden');
             document.getElementById('extraction-progress').classList.add('hidden');
 
-            const isBBBreakout = type === 'us-bb-breakout' || type === 'id-bb-breakout';
+            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental';
 
             try {
                 let data = null;
                 
-                if (isBBBreakout) {
+                if (isProgressScreener) {
                     const extractionProgress = document.getElementById('extraction-progress');
                     const extractionTitle = document.getElementById('extraction-title');
                     const extractionStatus = document.getElementById('extraction-status');
@@ -562,7 +570,11 @@
                     if (extractionPercent) extractionPercent.textContent = '0%';
                     extractionTicker.textContent = '';
                     
-                    const eventSource = new EventSource(`${API_BASE_URL}/screener/bb-progress`);
+                    let progressEndpoint = '/screener/bb-progress';
+                    if (type === 'us-fundamental' || type === 'id-fundamental') {
+                        progressEndpoint = '/screener/fundamental-progress';
+                    }
+                    const eventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
                     let screenerData = null;
                     let hasCompleted = false;
                     
@@ -606,7 +618,7 @@
                         }
                     };
                     
-                    statusDiv.textContent = 'RUNNING BB SCREENER...';
+                    statusDiv.textContent = (type === 'us-fundamental' || type === 'id-fundamental') ? 'RUNNING FUNDAMENTAL SCREENER...' : 'RUNNING BB SCREENER...';
                     statusDiv.className = 'loading text-[#d4af37]';
                     
                     try {
@@ -633,6 +645,13 @@
                         }
                         
                         if (screenerData.status === 'success' && screenerData.data && screenerData.data.length > 0) {
+                            if (screenerData.from_cache) {
+                                hasCompleted = true;
+                                if (eventSource) eventSource.close();
+                                extractionProgress.classList.add('hidden');
+                                statusDiv.textContent = `SCREENER COMPLETE: Loaded from cache (${screenerData.count} stocks)`;
+                                statusDiv.className = 'success text-[#4ade80]';
+                            }
                             renderScreenerResults(titleText, screenerData.data);
                         }
                     } catch (error) {
@@ -1183,9 +1202,22 @@
             screenerTitle.textContent = titleText;
             tbody.innerHTML = '';
             
+            const isFundamental = data.length > 0 && 'conclusion' in data[0];
             const hasRecommendation = data.length > 0 && 'recommendation' in data[0];
             
-            if (hasRecommendation) {
+            if (isFundamental) {
+                theadRow.innerHTML = `
+                    <th class="text-left py-3 text-[#99907c] uppercase text-[10px] tracking-wider">Ticker</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">Price</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">OP Margin</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">Free CF</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">Oper CF</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">D/E Ratio</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">PE Fair</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">DCF Fair</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-[10px] tracking-wider">Conclusion</th>
+                `;
+            } else if (hasRecommendation) {
                 theadRow.innerHTML = `
                     <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Ticker</th>
                     <th class="text-left py-3 text-[#99907c] uppercase text-xs tracking-wider">Date</th>
@@ -1218,7 +1250,36 @@
                 const changeSign = stock.change_pct >= 0 ? '+' : '';
                 
                 let rowHtml = '';
-                if (hasRecommendation) {
+                if (isFundamental) {
+                    const formatValue = (val, isPercent, isCurrency) => {
+                        if (val === null || val === undefined || isNaN(val)) return 'N/A';
+                        if (isPercent) return `${val.toFixed(2)}%`;
+                        if (isCurrency) {
+                            const prefix = stock.ticker.endsWith('.JK') ? 'Rp' : '$';
+                            if (Math.abs(val) >= 1e9) return `${prefix}${(val / 1e9).toFixed(2)}B`;
+                            if (Math.abs(val) >= 1e6) return `${prefix}${(val / 1e6).toFixed(2)}M`;
+                            if (Math.abs(val) >= 1e3) return `${prefix}${(val / 1e3).toFixed(2)}K`;
+                            return `${prefix}${val.toFixed(2)}`;
+                        }
+                        return val.toFixed(2);
+                    };
+
+                    const getCheckClass = (meet) => meet ? 'text-[#4ade80]' : 'text-[#f87171]';
+                    const getCheckSymbol = (meet) => meet ? '✓' : '✗';
+                    const conclClass = stock.conclusion === 'Meet Criterias' ? 'text-[#4ade80]' : 'text-[#f87171]';
+
+                    rowHtml = `
+                        <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
+                        <td class="py-3 text-right">${formatValue(stock.price, false, false)}</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c1)}">${formatValue(stock.operating_margin, true, false)} (${getCheckSymbol(stock.c1)})</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c2)}">${formatValue(stock.free_cash_flow, false, true)} (${getCheckSymbol(stock.c2)})</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c3)}">${formatValue(stock.operating_cash_flow, false, true)} (${getCheckSymbol(stock.c3)})</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c4)}">${formatValue(stock.debt_to_equity_ratio, false, false)} (${getCheckSymbol(stock.c4)})</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c5)}">${formatValue(stock.fair_price_pe, false, false)} (${getCheckSymbol(stock.c5)})</td>
+                        <td class="py-3 text-right ${getCheckClass(stock.c6)}">${formatValue(stock.fair_price_dcf, false, false)} (${getCheckSymbol(stock.c6)})</td>
+                        <td class="py-3 text-right font-bold ${conclClass}">${stock.conclusion}</td>
+                    `;
+                } else if (hasRecommendation) {
                     const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
                                    stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
                     rowHtml = `

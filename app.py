@@ -64,6 +64,17 @@ bb_screener_progress = {
     'message': ''
 }
 
+# Fundamental Screener progress tracking
+fundamental_screener_progress = {
+    'is_running': False,
+    'current_ticker': '',
+    'progress': 0,
+    'total': 0,
+    'results': [],
+    'status': 'idle',
+    'message': ''
+}
+
 # Rate limit threshold dalam menit
 RATE_LIMIT_MINUTES = 60
 CACHE_DIR = os.path.join(os.path.dirname(__file__), 'cache')
@@ -193,6 +204,89 @@ def save_screener_to_cache(screener_name, data):
         traceback.print_exc()
         return False
 
+def clean_float(val):
+    if val is None:
+        return None
+    try:
+        fval = float(val)
+        if np.isnan(fval) or np.isinf(fval):
+            return None
+        return fval
+    except (ValueError, TypeError):
+        return None
+
+def clean_nan_in_records(records):
+    cleaned = []
+    for record in records:
+        cleaned_rec = {}
+        for k, v in record.items():
+            if v is None:
+                cleaned_rec[k] = None
+            elif isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
+                cleaned_rec[k] = None
+            elif isinstance(v, dict):
+                cleaned_rec[k] = clean_nan_in_records([v])[0]
+            elif isinstance(v, list):
+                cleaned_rec[k] = [clean_nan_in_records([item])[0] if isinstance(item, dict) else item for item in v]
+            else:
+                cleaned_rec[k] = v
+        cleaned.append(cleaned_rec)
+    return cleaned
+
+def check_fundamental_run_status(market):
+    """
+    Check if we can use cached screener results or if we need to pull fresh data.
+    Returns: (use_cache, run_timestamp)
+    """
+    screener_name = f"{market.lower()}-fundamental"
+    cache_file = get_screener_cache_file(screener_name)
+    run_file = os.path.join(CACHE_DIR, f'.fundamental_{market.lower()}_run.txt')
+    
+    # Check if cached results file exists
+    if not os.path.exists(cache_file):
+        return False, None
+        
+    # Check if run file exists
+    if not os.path.exists(run_file):
+        return False, None
+        
+    try:
+        with open(run_file, 'r') as f:
+            timestamp_str = f.read().strip()
+        last_run_time = datetime.fromisoformat(timestamp_str)
+        age = datetime.now() - last_run_time
+        
+        # If age is not > 30 days
+        if age.days <= 30:
+            return True, timestamp_str
+    except Exception as e:
+        print(f"Error checking fundamental run file: {e}")
+        
+    return False, None
+
+def load_cached_fundamental_screener(screener_name):
+    """
+    Memuat data fundamental screener dari cache tanpa membatasi dengan TTL 1 jam.
+    """
+    cache_file = get_screener_cache_file(screener_name)
+    if not os.path.exists(cache_file):
+        return None, None, None
+    try:
+        with open(cache_file, 'r') as f:
+            lines = f.readlines()
+        if len(lines) < 2:
+            return None, None, None
+        metadata_line = lines[0].strip()
+        if not metadata_line.startswith('#'):
+            return None, None, None
+        metadata = json.loads(metadata_line[1:].strip())
+        csv_content = ''.join(lines[1:])
+        data = pd.read_csv(io.StringIO(csv_content))
+        return data, metadata, None
+    except Exception as e:
+        print(f"Error membaca cache fundamental screener: {str(e)}")
+        return None, None, str(e)
+
 def check_rate_limit_for_list(list_path):
     """
     Memeriksa apakah ekstraksi sudah dilakukan kurang dari RATE_LIMIT_MINUTES menit lalu.
@@ -260,7 +354,13 @@ def load_cached_fundamental(ticker):
             return None, None
         
         print(f"Data fundamental {ticker} dimuat dari cache")
-        return metadata['data'], None
+        data = metadata['data']
+        # Bersihin NaN dari data cache (safety net)
+        if isinstance(data, dict):
+            for key in list(data.keys()):
+                if isinstance(data[key], float):
+                    data[key] = clean_float(data[key])
+        return data, None
         
     except Exception as e:
         print(f"Error membaca cache fundamental: {str(e)}")
@@ -394,6 +494,11 @@ def download_fundamental_data(ticker, force_refresh=False):
             fundamental['fair_price_dcf'] = (total_pv + pv_tv) / shares if shares else None
         except Exception:
             fundamental['fair_price_dcf'] = None
+        
+        # Bersihin NaN dari semua nilai numerik
+        for key in list(fundamental.keys()):
+            if isinstance(fundamental[key], float):
+                fundamental[key] = clean_float(fundamental[key])
         
         # Ambil Major Holders
         try:
@@ -2383,6 +2488,335 @@ def screener_bb_progress():
                 yield f"data: {json.dumps(current_progress)}\n\n"
             
             if bb_screener_progress['status'] in ['completed', 'error']:
+                break
+            
+            time.sleep(1)
+    
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')
+
+
+def run_fundamental_screener(list_path, list_type):
+    """
+    Helper function untuk menjalankan fundamental screener pada watchlist
+    """
+    log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type})
+    global fundamental_screener_progress
+    
+    try:
+        tickers_df = pd.read_csv(list_path)
+        if 'Symbol' not in tickers_df.columns:
+            fundamental_screener_progress['status'] = 'error'
+            fundamental_screener_progress['message'] = "Kolom 'Symbol' tidak ditemukan"
+            return
+        
+        tickers = tickers_df['Symbol'].tolist()
+        
+        fundamental_screener_progress['is_running'] = True
+        fundamental_screener_progress['total'] = len(tickers)
+        fundamental_screener_progress['progress'] = 0
+        fundamental_screener_progress['results'] = []
+        fundamental_screener_progress['status'] = 'running'
+        fundamental_screener_progress['message'] = f'Starting Fundamental Screener for {list_type} ({len(tickers)} tickers)...'
+        
+        for i, ticker in enumerate(tickers):
+            ticker = ticker.strip().upper()
+            fundamental_screener_progress['current_ticker'] = ticker
+            fundamental_screener_progress['progress'] = i + 1
+            fundamental_screener_progress['message'] = f'Analyzing {ticker}...'
+            
+            try:
+                # Ambil data fundamental (force_refresh=True agar data ter-update)
+                fundamental_data, err = download_fundamental_data(ticker, force_refresh=True)
+                
+                # Cek harga terakhir -- baca langsung dari cache CSV, jangan overwrite
+                current_price = None
+                try:
+                    cache_file = get_cache_file_path(ticker)
+                    if os.path.exists(cache_file):
+                        with open(cache_file, 'r') as f:
+                            lines = f.readlines()
+                        if len(lines) >= 2:
+                            csv_content = ''.join(lines[1:])
+                            df_cache = pd.read_csv(io.StringIO(csv_content))
+                            if 'Close' in df_cache.columns and not df_cache.empty:
+                                current_price = float(pd.to_numeric(df_cache['Close'].iloc[-1], errors='coerce'))
+                except Exception as pe:
+                    print(f"Error reading cached price for {ticker}: {pe}")
+                
+                if current_price is None or current_price == 0:
+                    try:
+                        stock_yf = yf.Ticker(ticker)
+                        info = stock_yf.info
+                        current_price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
+                    except:
+                        pass
+                
+                if err or fundamental_data is None:
+                    print(f"Fundamental Screener - {ticker}: Missing fundamentals (err={err})")
+                    fundamental_screener_progress['message'] = f'{ticker}: No data'
+                    continue
+                
+                op_margin = clean_float(fundamental_data.get('operating_margin'))
+                fcf = clean_float(fundamental_data.get('free_cash_flow'))
+                ocf = clean_float(fundamental_data.get('operating_cash_flow'))
+                debt_to_equity = clean_float(fundamental_data.get('long_term_debt_to_equity'))
+                fair_price_pe = clean_float(fundamental_data.get('fair_price_pe'))
+                fair_price_dcf = clean_float(fundamental_data.get('fair_price_dcf'))
+                
+                current_price_clean = clean_float(current_price)
+                if current_price_clean is None:
+                    print(f"Fundamental Screener - {ticker}: Missing price")
+                    fundamental_screener_progress['message'] = f'{ticker}: No price'
+                    continue
+                
+                # 1. operating margin > 0
+                c1 = op_margin is not None and op_margin > 0
+                
+                # 2. free cash flow > 0
+                c2 = fcf is not None and fcf > 0
+                
+                # 3. operating cash flow > 0
+                c3 = ocf is not None and ocf > 0
+                
+                # 4. debt to equity ratio < 2
+                c4 = False
+                debt_to_equity_ratio = None
+                if debt_to_equity is not None:
+                    debt_to_equity_ratio = debt_to_equity / 100.0 if debt_to_equity > 10 else debt_to_equity
+                    c4 = debt_to_equity_ratio < 2
+                
+                # 5. PE Fair Value > current price
+                c5 = fair_price_pe is not None and fair_price_pe > current_price_clean
+                
+                # 6. DCF Fair Value > current price
+                c6 = fair_price_dcf is not None and fair_price_dcf > current_price_clean
+                
+                meet_criteria = c1 and c2 and c3 and c4 and c5 and c6
+                conclusion = "Meet Criterias" if meet_criteria else "Does not meet Criterias"
+                
+                result_item = {
+                    'ticker': ticker,
+                    'price': round(current_price_clean, 2),
+                    'operating_margin': round(op_margin, 4) if op_margin is not None else None,
+                    'free_cash_flow': float(fcf) if fcf is not None else None,
+                    'operating_cash_flow': float(ocf) if ocf is not None else None,
+                    'debt_to_equity_ratio': round(debt_to_equity_ratio, 4) if debt_to_equity_ratio is not None else None,
+                    'fair_price_pe': round(fair_price_pe, 2) if fair_price_pe is not None else None,
+                    'fair_price_dcf': round(fair_price_dcf, 2) if fair_price_dcf is not None else None,
+                    'c1': bool(c1),
+                    'c2': bool(c2),
+                    'c3': bool(c3),
+                    'c4': bool(c4),
+                    'c5': bool(c5),
+                    'c6': bool(c6),
+                    'conclusion': conclusion
+                }
+                
+                fundamental_screener_progress['results'].append(result_item)
+                fundamental_screener_progress['message'] = f'{ticker}: {conclusion}'
+                
+            except Exception as e:
+                print(f"Error analyzing fundamentals for {ticker}: {e}")
+                fundamental_screener_progress['message'] = f'{ticker}: Error'
+                continue
+            
+            time.sleep(0.5)
+            
+        fundamental_screener_progress['status'] = 'completed'
+        fundamental_screener_progress['message'] = f'Fundamental Screener completed: {len(fundamental_screener_progress["results"])} stocks analyzed'
+        fundamental_screener_progress['is_running'] = False
+        log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type}, status='success',
+                  detail=f'{len(fundamental_screener_progress["results"])} stocks analyzed')
+                  
+    except Exception as e:
+        fundamental_screener_progress['status'] = 'error'
+        fundamental_screener_progress['message'] = str(e)
+        fundamental_screener_progress['is_running'] = False
+        log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type}, status='error',
+                  detail=str(e))
+
+
+@app.route('/screener/us-fundamental', methods=['GET', 'POST', 'OPTIONS'])
+def screener_us_fundamental():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'})
+    start_time = time.time()
+    
+    global fundamental_screener_progress
+    
+    use_cache, run_timestamp = check_fundamental_run_status('US')
+    if use_cache:
+        cached_data, metadata, error = load_cached_fundamental_screener('us-fundamental')
+        if cached_data is not None:
+            records = clean_nan_in_records(cached_data.to_dict('records'))
+            log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            return jsonify({
+                "status": "success",
+                "message": "Data dari cache",
+                "count": len(cached_data),
+                "data": records,
+                "from_cache": True,
+                "cache_timestamp": run_timestamp
+            })
+    
+    uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
+    
+    if fundamental_screener_progress['is_running']:
+        log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Fundamental Screener sedang berjalan"}), 409
+    
+    if not os.path.exists(uslist_path):
+        log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='error',
+                  detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
+    
+    try:
+        run_fundamental_screener(uslist_path, 'US')
+        
+        if fundamental_screener_progress['results']:
+            results_df = pd.DataFrame(fundamental_screener_progress['results'])
+            save_screener_to_cache('us-fundamental', results_df)
+            
+            run_file = os.path.join(CACHE_DIR, '.fundamental_us_run.txt')
+            with open(run_file, 'w') as f:
+                f.write(datetime.now().isoformat())
+        
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='success',
+                  detail=f'{len(fundamental_screener_progress["results"])} results', duration_ms=duration)
+        records = clean_nan_in_records(fundamental_screener_progress['results'])
+        response = jsonify({
+            "status": "success",
+            "message": fundamental_screener_progress['message'],
+            "count": len(fundamental_screener_progress['results']),
+            "data": records
+        })
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+        
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='error',
+                  detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/screener/id-fundamental', methods=['GET', 'POST', 'OPTIONS'])
+def screener_id_fundamental():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'})
+    start_time = time.time()
+    
+    global fundamental_screener_progress
+    
+    use_cache, run_timestamp = check_fundamental_run_status('ID')
+    if use_cache:
+        cached_data, metadata, error = load_cached_fundamental_screener('id-fundamental')
+        if cached_data is not None:
+            records = clean_nan_in_records(cached_data.to_dict('records'))
+            log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            return jsonify({
+                "status": "success",
+                "message": "Data dari cache",
+                "count": len(cached_data),
+                "data": records,
+                "from_cache": True,
+                "cache_timestamp": run_timestamp
+            })
+    
+    idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
+    
+    if fundamental_screener_progress['is_running']:
+        log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Fundamental Screener sedang berjalan"}), 409
+    
+    if not os.path.exists(idlist_path):
+        log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='error',
+                  detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
+    
+    try:
+        run_fundamental_screener(idlist_path, 'ID')
+        
+        if fundamental_screener_progress['results']:
+            results_df = pd.DataFrame(fundamental_screener_progress['results'])
+            save_screener_to_cache('id-fundamental', results_df)
+            
+            run_file = os.path.join(CACHE_DIR, '.fundamental_id_run.txt')
+            with open(run_file, 'w') as f:
+                f.write(datetime.now().isoformat())
+        
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='success',
+                  detail=f'{len(fundamental_screener_progress["results"])} results', duration_ms=duration)
+        records = clean_nan_in_records(fundamental_screener_progress['results'])
+        response = jsonify({
+            "status": "success",
+            "message": fundamental_screener_progress['message'],
+            "count": len(fundamental_screener_progress['results']),
+            "data": records
+        })
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+        
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='error',
+                  detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/screener/fundamental-progress', methods=['GET', 'OPTIONS'])
+def screener_fundamental_progress():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        return response
+    
+    def generate():
+        last_progress = None
+        
+        while True:
+            global fundamental_screener_progress
+            
+            current_progress = {
+                'status': fundamental_screener_progress['status'],
+                'current_ticker': fundamental_screener_progress['current_ticker'],
+                'progress': fundamental_screener_progress['progress'],
+                'total': fundamental_screener_progress['total'],
+                'results_count': len(fundamental_screener_progress['results']),
+                'message': fundamental_screener_progress['message']
+            }
+            
+            if current_progress != last_progress:
+                last_progress = current_progress.copy()
+                
+                yield f"data: {json.dumps(current_progress)}\n\n"
+            
+            if fundamental_screener_progress['status'] in ['completed', 'error']:
                 break
             
             time.sleep(1)
