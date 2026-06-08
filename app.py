@@ -412,7 +412,7 @@ def download_fundamental_data(ticker, force_refresh=False):
             'free_cash_flow': info.get('freeCashflow'),
             'operating_cash_flow': info.get('operatingCashflow'),
             'payout_ratio': info.get('payoutRatio'),
-            'long_term_debt_to_equity': info.get('debtToEquity'),
+            'long_term_debt_to_equity': info.get('debtToEquity') / 100.0 if info.get('debtToEquity') is not None else None,
             'return_on_assets': info.get('returnOnAssets'),
             'return_on_equity': info.get('returnOnEquity'),
             'revenue_growth': info.get('revenueGrowth'),
