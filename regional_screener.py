@@ -412,14 +412,41 @@ def parse_ammonia():
             'https://www.chemicalbook.com/PriceInfoall_CB9854275.htm',
             headers=ZH_HEADERS, timeout=15,
         )
-        prices = re.findall(r'([\d,.]+)\u5143/\u5428', resp.text)
-        dates = re.findall(r'(\d+\u6708\d+\u65e5)', resp.text)
-        if prices:
-            latest = prices[0].replace(',', '')
+        soup = BeautifulSoup(resp.text, 'lxml')
+        entries = []
+        for li in soup.find_all('li'):
+            if li.get('class') and 'align_r' in li.get('class'):
+                continue
+            txt = li.get_text(' ', strip=True)
+            m = re.search(r'(\d+月\d+日).*?氨.*?报价[:：]?(\d[\d,.]*)', txt)
+            if m:
+                entries.append({
+                    'date': m.group(1),
+                    'price': m.group(2).replace(',', ''),
+                })
+        if entries:
+            latest = entries[0]
+            close = latest['price']
+            change = ''
+            change_pct = ''
+            if len(entries) >= 2:
+                prev = entries[1]
+                try:
+                    c = float(close)
+                    p = float(prev['price'])
+                    diff = round(c - p, 2)
+                    pc = round((diff / p) * 100, 2) if p != 0 else 0
+                    change = f"+{diff}" if diff >= 0 else str(diff)
+                    change_pct = f"+{pc}%" if pc >= 0 else f"{pc}%"
+                except (ValueError, TypeError):
+                    pass
             result['Ammonia'] = {
-                'close': latest,
+                'close': close,
+                'change': change,
+                'change_pct': change_pct,
+                'date': latest['date'],
                 'unit': 'Yuan/ton',
-                'note': f"ChemicalBook ({dates[0] if dates else 'latest'})",
+                'note': f"ChemicalBook ({entries[0]['date']})",
                 'source': 'ChemicalBook',
             }
     except Exception as e:
