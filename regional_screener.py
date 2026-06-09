@@ -384,21 +384,74 @@ def parse_indonesia_bonds():
 # ──────────────── CNBC INOCD5 ────────────────
 
 
-def parse_cnbc_inocd5():
+def parse_indonesia_cds():
+    """Fetch Indonesia 5Y CDS from WorldGovernmentBonds.com API"""
     result = {}
     try:
-        resp = fetch('https://www.cnbc.com/quotes/INOCD5', timeout=15)
-        # Search for CDS price near INOCD5
-        for match in re.finditer(r'INOCD5.{0,300}', resp.text, re.DOTALL):
-            prices = re.findall(r'\b([89]\d\.\d+|1\d{2}\.\d+)\b', match.group())
-            if prices:
-                result['IndoCDS 5yr'] = {
-                    'close': prices[0],
-                    'source': 'CNBC',
-                }
-                break
+        payload = {
+            "GLOBALVAR": {
+                "FUNCTION": "CDS",
+                "DOMESTIC": True,
+                "ENDPOINT": "https://www.worldgovernmentbonds.com/wp-json/common/v1/historical",
+                "DATE_RIF": "2099-12-31",
+                "DEBUG": True,
+                "OBJ": {"UNIT": "", "DECIMAL": 2, "UNIT_DELTA": "%", "DECIMAL_DELTA": 2},
+                "COUNTRY1": {
+                    "SYMBOL": "39", "PAESE": "Indonesia",
+                    "PAESE_UPPERCASE": "INDONESIA", "BANDIERA": "id",
+                    "URL_PAGE": "indonesia",
+                },
+                "COUNTRY2": None,
+                "OBJ1": {"DURATA_STRING": "5 Years", "DURATA": 60},
+                "OBJ2": None,
+            }
+        }
+        resp = req.post(
+            'https://www.worldgovernmentbonds.com/wp-json/common/v1/historical',
+            json=payload,
+            headers={
+                'Origin': 'https://www.worldgovernmentbonds.com',
+                'Referer': 'https://www.worldgovernmentbonds.com/cds-historical-data/indonesia/5-years/',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            },
+            impersonate='chrome120', timeout=20,
+        )
+        data = resp.json()
+        if not data.get('success'):
+            return result
+        r = data['result']
+        close = str(r['ultimoValore'])
+        change = ''
+        change_pct = ''
+        html = r.get('htmlLatestChange', '')
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            for tr in soup.find_all('tr'):
+                cells = tr.find_all('td')
+                if len(cells) >= 5 and '1 Week' in cells[0].get_text(strip=True):
+                    min_div = cells[2].find('div')
+                    prev_val = min_div.get_text(strip=True) if min_div else ''
+                    if prev_val:
+                        try:
+                            curr = float(close)
+                            prev = float(prev_val)
+                            diff = round(curr - prev, 2)
+                            pc = round((diff / prev) * 100, 2) if prev != 0 else 0
+                            change = f"+{diff}" if diff >= 0 else str(diff)
+                            change_pct = f"+{pc}%" if pc >= 0 else f"{pc}%"
+                        except (ValueError, TypeError):
+                            change = cells[1].get_text(strip=True)
+                            change_pct = change
+                    break
+        result['IndoCDS 5yr'] = {
+            'close': close,
+            'change': change,
+            'change_pct': change_pct,
+            'source': 'WorldGovernmentBonds',
+        }
     except Exception as e:
-        print(f"  WARN INOCD5: {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
+        print(f"  WARN IndoCDS: {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
     return result
 
 
@@ -664,7 +717,7 @@ def main():
     # 10. IndoCDS
     if debug:
         print("IndoCDS...", file=sys.stderr)
-    DATA.update(parse_cnbc_inocd5())
+    DATA.update(parse_indonesia_cds())
 
     # 10. Ammonia
     if debug:
