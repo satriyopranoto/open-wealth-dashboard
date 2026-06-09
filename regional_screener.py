@@ -60,19 +60,21 @@ def code_from_name(name):
         'shanghai': 'Shanghai',
         'idx composite': 'IDX',
         'idx lq45': 'LQ45',
+        'idx kompas 100': 'IDX Kompas 100',
+        'ftse indonesia local': 'FTSE Indonesia',
         'idx30': 'IDX30',
-        'idxe energy': 'IDXEnergy',
-        'idxe basic materials': 'IDX BscMat',
-        'idxe industrials': 'IDXIndst',
-        'idxe consumer non-cyclicals': 'IDXNONCYC',
-        'idxe healthcare': 'IDXHlthcare',
-        'idxe consumer cyclicals': 'IDXCYCLC',
-        'idxe technology': 'IDX Tech',
-        'idxe transportation & logistics': 'IDX Transprt',
-        'idxe infrastructure': 'IDX Infra',
-        'idxe finance': 'IDX Finance',
-        'idxe banking': 'IDX Banking',
-        'idxe property & real estate': 'IDX Property',
+        'idx 30': 'IDX30',
+        'idx energy': 'IDXEnergy',
+        'idx basic materials': 'IDX BscMat',
+        'idx industrials': 'IDXIndst',
+        'idx consumer non-cyclicals': 'IDXNONCYC',
+        'idx healthcare': 'IDXHlthcare',
+        'idx consumer cyclical': 'IDXCYCLC',
+        'idx technology': 'IDX Tech',
+        'idx transportation': 'IDX Transprt',
+        'idx infrastructure': 'IDX Infra',
+        'idx finance': 'IDX Finance',
+        'idx banking': 'IDX Banking',
         'u.s. 2y': 'US2Yr',
         'u.s. 5y': 'US5Yr',
         'u.s. 10y': 'US10Yr',
@@ -277,6 +279,74 @@ def parse_yahoo_finance(ticker, code_name):
             }
     except Exception as e:
         print(f"  WARN {code_name} (Yahoo): {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
+    return result
+
+
+# ──────────────── YAHOO SECTOR INDICES ────────────────
+
+
+def parse_yahoo_sector_indices():
+    """
+    Fetch all 12 IDX sector indices from Yahoo Finance.
+    Some sectors (IDXENERGY.JK, IDXBASIC.JK, etc.) don't expose
+    change/change% in HTML, so calculate from price - prev_close.
+    """
+    result = {}
+    sectors = [
+        ("IDXEnergy", "IDXENERGY.JK"),
+        ("IDX BscMat", "IDXBASIC.JK"),
+        ("IDXIndst", "IDXINDUST.JK"),
+        ("IDXNONCYC", "IDXNONCYC.JK"),
+        ("IDXHlthcare", "IDXHEALTH.JK"),
+        ("IDXCYCLC", "IDXCYCLIC.JK"),
+        ("IDX Tech", "IDXTECHNO.JK"),
+        ("IDX Transprt", "IDXTRANS.JK"),
+        ("IDX Infra", "IDXINFRA.JK"),
+        ("IDX Finance", "IDXFINANCE.JK"),
+        ("IDX Banking", "INFOBANK15.JK"),
+        ("IDX Property", "IDXPROPERT.JK"),
+    ]
+    for code_name, ticker in sectors:
+        try:
+            resp = fetch(
+                f'https://finance.yahoo.com/quote/{ticker}/',
+                impersonate='chrome120', timeout=20,
+            )
+            soup = BeautifulSoup(resp.text, 'lxml')
+            qsp = soup.find('span', {'data-testid': 'qsp-price'})
+            price_str = qsp.get_text(strip=True).replace(',', '') if qsp else None
+            if not price_str:
+                pe = soup.find('fin-streamer', {'data-field': 'regularMarketPrice'})
+                if pe and not pe.get('data-symbol'):
+                    price_str = (pe.get('data-value', '') or
+                                 pe.get_text(strip=True)).replace(',', '')
+            if not price_str:
+                continue
+            price = price_str
+            change = ''
+            change_pct = ''
+            prev_el = soup.find('fin-streamer', {'data-field': 'regularMarketPreviousClose'})
+            if prev_el:
+                prev_raw = prev_el.get('data-value', '') or prev_el.get_text(strip=True)
+                prev_str = prev_raw.replace(',', '')
+                if prev_str:
+                    try:
+                        p = float(price)
+                        prev = float(prev_str)
+                        diff = round(p - prev, 2)
+                        pct = round((diff / prev) * 100, 2) if prev != 0 else 0
+                        change = f"+{diff}" if diff >= 0 else str(diff)
+                        change_pct = f"+{pct}%" if pct >= 0 else f"{pct}%"
+                    except (ValueError, TypeError):
+                        pass
+            result[code_name] = {
+                'close': price,
+                'change': change,
+                'change_pct': change_pct,
+                'source': 'Yahoo Finance (Sector)',
+            }
+        except Exception as e:
+            print(f"  WARN {code_name} (Yahoo Sector): {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
     return result
 
 
@@ -491,11 +561,11 @@ def main():
         ('Major Indices', 'https://www.investing.com/indices/major-indices', 1, 2, 5, 6),
     ]))
 
-    # 2. Indonesia Indices
+    # 2. Indonesia Indices (include all tabs: major, additional, primary sectors, other)
     if debug:
         print("IDX Indices...", file=sys.stderr)
     DATA.update(parse_table_pages([
-        ('IDX Indices', 'https://www.investing.com/indices/indonesia-indices', 1, 2, 5, 6),
+        ('IDX Indices', 'https://www.investing.com/indices/indonesia-indices?include-major-indices=true&include-additional-indices=true&include-primary-sectors=true&include-other-indices=true', 1, 2, 5, 6),
     ]))
 
     # 3. Commodities Futures
@@ -553,6 +623,11 @@ def main():
         if debug:
             print(f"  {code}...", file=sys.stderr)
         DATA.update(parse_yahoo_finance(ticker, code))
+
+    # 8b. IDX Sector Indices (Yahoo Finance)
+    if debug:
+        print("IDX Sector Indices...", file=sys.stderr)
+    DATA.update(parse_yahoo_sector_indices())
 
     # 9. DXY (CNBC)
     if debug:
