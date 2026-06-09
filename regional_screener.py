@@ -418,6 +418,66 @@ def parse_cnbc_dxy():
     except Exception as e:
         print(f"  WARN DXY: {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
     return result
+
+
+def parse_barchart_coal():
+    """Fetch all coal futures contracts from Barchart"""
+    result = {}
+    month_codes = {
+        "Jun": "M",
+        "Jul": "N",
+        "Aug": "Q",
+        "Sep": "U",
+    }
+    
+    for root_name, root_sym, label in [
+        ("Newcastle", "LQ", "Coal(Nwl)"),
+        ("Rotterdam", "LU", "Coal(Rot)"),
+    ]:
+        contracts = []
+        for month_name, code in month_codes.items():
+            sym = f"{root_sym}{code}26"
+            try:
+                resp = fetch(
+                    f'https://www.barchart.com/futures/quotes/{sym}/overview',
+                    impersonate='chrome120',
+                    timeout=20,
+                )
+                soup = BeautifulSoup(resp.text, 'lxml')
+                tables = soup.find_all('table')
+                for table in tables:
+                    rows = table.find_all('tr')
+                    if rows and len(rows) > 1:
+                        cells = rows[1].find_all('td')
+                        if len(cells) >= 3 and cells[0].get_text(strip=True) == sym:
+                            price_raw = cells[1].get_text(strip=True).replace('s', '').replace(',', '')
+                            chg_raw = cells[2].get_text(strip=True).replace(',', '')
+                            try:
+                                price = float(price_raw)
+                                chg = float(chg_raw)
+                                prev_close = price - chg
+                                pct = round((chg / prev_close) * 100, 2) if prev_close else 0
+                                contracts.append({
+                                    'month': month_name,
+                                    'price': f"{price:.2f}",
+                                    'change': f"{chg:+.2f}",
+                                    'change_pct': f"{pct:+.2f}%",
+                                })
+                            except:
+                                pass
+                            break
+            except Exception as e:
+                pass
+        
+        if contracts:
+            # Store as array for the main script to format
+            result[label] = {
+                'contracts': contracts,
+                'source': 'Barchart',
+            }
+    
+    return result
+
 def main():
     debug = '--json-only' not in sys.argv
     if debug:
@@ -443,10 +503,16 @@ def main():
         print("Commodities...", file=sys.stderr)
     DATA.update(parse_commodities_futures())
 
+
+
+
+    # 3b. Coal futures from Barchart
+    if debug:
+        print("Coal from Barchart...", file=sys.stderr)
+    DATA.update(parse_barchart_coal())
+
     # 4. Single-instrument pages
     single_pages = [
-        ('Newcastle Coal', 'https://www.investing.com/commodities/newcastle-coal-futures', 'Coal(Nwl)'),
-        ('Rotterdam Coal', 'https://www.investing.com/commodities/rotterdam-coal-futures', 'Coal(Rot)'),
         ('Iron Ore', 'https://www.investing.com/commodities/iron-ore-62-cfr-futures', 'Iron Ore 62%'),
         ('CPO', 'https://id.investing.com/commodities/malaysian-crude-palm-oil-futures', 'CPO'),
         ('Woodpulp', 'https://id.investing.com/commodities/shfe-bleached-softwood-kraft-pulp-futures', 'Woodpulp'),
