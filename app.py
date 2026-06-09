@@ -256,8 +256,8 @@ def check_fundamental_run_status(market):
         last_run_time = datetime.fromisoformat(timestamp_str)
         age = datetime.now() - last_run_time
         
-        # If age is not > 30 days
-        if age.days <= 30:
+        # If age is not > 24 hours
+        if age < timedelta(hours=24):
             return True, timestamp_str
     except Exception as e:
         print(f"Error checking fundamental run file: {e}")
