@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl -d Ubuntu -- bash -c \"ls /home/satri/stocktrade\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/satri/stocktrade && docker-compose build --no-cache flask 2>&1 | tail -20\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/satri/stocktrade && cat docker-compose.yml\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/satri/stocktrade && docker-compose build --no-cache app 2>&1 | tail -20\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cd /home/satri/stocktrade && docker-compose up -d 2>&1\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"sleep 3 && docker-compose -f /home/satri/stocktrade/docker-compose.yml ps && docker-compose -f /home/satri/stocktrade/docker-compose.yml logs app --tail=15\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"docker-compose -f /home/satri/stocktrade/docker-compose.yml logs app --tail=50 2>&1 | grep -i 'fair\\\\|dcf\\\\|pe\\\\|error\\\\|traceback\\\\|exception' -i\")",
+      "Bash(wsl -d *)"
+    ]
+  }
+}

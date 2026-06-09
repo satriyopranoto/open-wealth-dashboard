@@ -381,10 +381,43 @@ def parse_jisdor():
         print(f"  WARN JISDOR: {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
     return result
 
+# ──────────────── DXY from CNBC ────────────────
 
-# ──────────────── MAIN ────────────────
 
+def parse_cnbc_dxy():
+    result = {}
+    try:
+        resp = fetch(
+            'https://www.cnbc.com/quotes/.DXY',
+            impersonate='chrome120',
+            timeout=20,
+        )
+        soup = BeautifulSoup(resp.text, 'lxml')
+        body = soup.find('body')
+        body_txt = body.get_text(' ', strip=True) if body else ''
 
+        # Parse: "Last | 06/09/26 EDT 99.995 -0.05 ( -0.05% )"
+        m = re.search(r'Last\s*\|.*?(\d{2,3}\.\d{3})\s+([+-]?\d+\.\d+)\s*\(\s*([+-]?\d+\.\d+)%\)', body_txt)
+        if m:
+            result['USDIndx'] = {
+                'close': m.group(1),
+                'change': m.group(2),
+                'change_pct': m.group(3) + '%',
+                'source': 'CNBC',
+            }
+        else:
+            # Fallback: just get the price (even if change is UNCH)
+            nums = re.findall(r'(\d{2,3}\.\d{3})', body_txt)
+            if nums:
+                result['USDIndx'] = {
+                    'close': nums[0],
+                    'change': '',
+                    'change_pct': '',
+                    'source': 'CNBC',
+                }
+    except Exception as e:
+        print(f"  WARN DXY: {type(e).__name__}: {str(e)[:60]}", file=sys.stderr)
+    return result
 def main():
     debug = '--json-only' not in sys.argv
     if debug:
@@ -449,13 +482,18 @@ def main():
     # 8. Yahoo Finance
     if debug:
         print("Yahoo Finance...", file=sys.stderr)
-    for ticker, code in [('^VIX', 'VIX'), ('DX-Y.NYB', 'USDIndx'),
+    for ticker, code in [('^VIX', 'VIX'),
                           ('TLK', 'TLKM'), ('EIDO', 'EIDO'), ('EEM', 'EEM')]:
         if debug:
             print(f"  {code}...", file=sys.stderr)
         DATA.update(parse_yahoo_finance(ticker, code))
 
-    # 9. IndoCDS
+    # 9. DXY (CNBC)
+    if debug:
+        print("DXY.. CNBC...", file=sys.stderr)
+    DATA.update(parse_cnbc_dxy())
+
+    # 10. IndoCDS
     if debug:
         print("IndoCDS...", file=sys.stderr)
     DATA.update(parse_cnbc_inocd5())
