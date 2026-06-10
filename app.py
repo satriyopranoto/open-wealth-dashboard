@@ -2410,10 +2410,22 @@ def screener_us_bb_breakout():
     
     global bb_screener_progress
     
+    # Reset progress immediately to avoid stale SSE state from previous run
+    bb_screener_progress['status'] = 'starting'
+    bb_screener_progress['current_ticker'] = ''
+    bb_screener_progress['progress'] = 0
+    bb_screener_progress['total'] = 0
+    bb_screener_progress['results'] = []
+    bb_screener_progress['message'] = 'Initializing...'
+    bb_screener_progress['is_running'] = False
+    
     cached_data, metadata, error = load_cached_screener('us-bb-breakout', 'uslist')
     if cached_data is not None:
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
+        # Update progress with cached result so SSE has fresh state
+        bb_screener_progress['status'] = 'completed'
+        bb_screener_progress['progress'] = len(cached_data)
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
@@ -2479,10 +2491,22 @@ def screener_id_bb_breakout():
     
     global bb_screener_progress
     
+    # Reset progress immediately to avoid stale SSE state from previous run
+    bb_screener_progress['status'] = 'starting'
+    bb_screener_progress['current_ticker'] = ''
+    bb_screener_progress['progress'] = 0
+    bb_screener_progress['total'] = 0
+    bb_screener_progress['results'] = []
+    bb_screener_progress['message'] = 'Initializing...'
+    bb_screener_progress['is_running'] = False
+    
     cached_data, metadata, error = load_cached_screener('id-bb-breakout', 'idlist')
     if cached_data is not None:
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
+        # Update progress with cached result so SSE has fresh state
+        bb_screener_progress['status'] = 'completed'
+        bb_screener_progress['progress'] = len(cached_data)
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
@@ -2546,6 +2570,7 @@ def screener_bb_progress():
     def generate():
         last_progress = None
         idle_loops = 0
+        seen_non_idle = False  # track if we've seen a fresh state
         
         while True:
             global bb_screener_progress
@@ -2558,6 +2583,13 @@ def screener_bb_progress():
                 'results_count': len(bb_screener_progress['results']),
                 'message': bb_screener_progress['message']
             }
+            
+            # Skip stale 'completed'/'error' state at startup
+            # Only yield when state actually changes from the initial value
+            if last_progress is None and current_progress['status'] in ['completed', 'error']:
+                last_progress = current_progress.copy()
+                time.sleep(1)
+                continue
             
             if current_progress != last_progress:
                 last_progress = current_progress.copy()
