@@ -2235,7 +2235,7 @@ def run_bb_screener(list_path, list_type):
             bb_screener_progress['message'] = f'Analyzing {ticker}...'
             
             try:
-                data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=True)
+                data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
                 
                 print(f"BB Screener - {ticker}: data={type(data)}, error={error_msg}, empty={data.empty if data is not None else True}")
                 
