@@ -905,6 +905,50 @@ def calculate_bollinger_bands(df, period=20, num_std=2):
     lower = middle - (num_std * std)
     return upper, middle, lower
 
+
+def calculate_adx(df, period=14):
+    """
+    Menghitung ADX, +DI (PDI), dan -DI (MDI)
+    Menggunakan Wilder's Smoothing via EWM
+    """
+    high = df['High'].astype(float)
+    low = df['Low'].astype(float)
+    close = df['Close'].astype(float)
+
+    # True Range
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low - prev_close).abs()
+    ], axis=1).max(axis=1)
+
+    # Directional Movement
+    up_move = high - high.shift(1)
+    down_move = low.shift(1) - low
+    plus_dm = pd.Series(np.where((up_move > down_move) & (up_move > 0), up_move, 0), index=df.index)
+    minus_dm = pd.Series(np.where((down_move > up_move) & (down_move > 0), down_move, 0), index=df.index)
+
+    # Wilder's Smoothing (alpha = 1/period ≈ EMA)
+    alpha = 1.0 / period
+    smoothed_tr = tr.ewm(alpha=alpha, adjust=False, min_periods=period).mean()
+    smoothed_plus = plus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean()
+    smoothed_minus = minus_dm.ewm(alpha=alpha, adjust=False, min_periods=period).mean()
+
+    # +DI / -DI  (PDI / MDI)
+    pdi = 100 * smoothed_plus / smoothed_tr.replace(0, np.nan)
+    mdi = 100 * smoothed_minus / smoothed_tr.replace(0, np.nan)
+
+    # DX
+    dm_sum = pdi + mdi
+    dx = 100 * (pdi - mdi).abs() / dm_sum.replace(0, np.nan)
+
+    # ADX = smoothed DX
+    adx = dx.ewm(alpha=alpha, adjust=False, min_periods=period).mean()
+
+    return adx, pdi, mdi
+
+
 @app.route('/', methods=['GET'])
 def index():
     """Halaman Landing Page"""
@@ -2252,6 +2296,13 @@ def run_bb_screener(list_path, list_type):
                     if col in data.columns:
                         data[col] = pd.to_numeric(data[col], errors='coerce')
                 
+                # Drop rows with NaN Close (partial/incomplete trading days)
+                before = len(data)
+                data = data.dropna(subset=['Close'])
+                dropped = before - len(data)
+                if dropped > 0:
+                    print(f"BB Screener - {ticker}: dropped {dropped} incomplete row(s)")
+                
                 print(f"BB Screener - {ticker}: data length = {len(data)}")
                 
                 if len(data) < 25:
@@ -2260,6 +2311,7 @@ def run_bb_screener(list_path, list_type):
                 
                 sl_series = calculate_sl(data)
                 upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+                adx_series, pdi_series, mdi_series = calculate_adx(data)
                 
                 last_price = float(data['Close'].iloc[-1])
                 last_sl = float(sl_series.iloc[-1])
@@ -2277,9 +2329,25 @@ def run_bb_screener(list_path, list_type):
                 value_in_millions = (last_price * last_volume) / 1_000_000
                 
                 last_date = data.index[-1].strftime('%Y-%m-%d')
-                
+
+                # ADX values for BUY confirmation
+                last_adx = float(adx_series.iloc[-1])
+                last_pdi = float(pdi_series.iloc[-1])
+                last_mdi = float(mdi_series.iloc[-1])
+                adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+
+                adx_rising = last_adx > adx_5ago
+                pdi_above_mdi = last_pdi > last_mdi
+                adx_strong = last_adx > 25
+
                 if last_price > last_sl and last_price > last_upper_bb:
-                    recommendation = "BUY"
+                    # BUY: harga breakout BB + konfirmasi ADX
+                    if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
+                            and pdi_above_mdi and adx_strong and adx_rising):
+                        recommendation = "BUY"
+                    else:
+                        # Breakout tanpa konfirmasi ADX = HOLD
+                        recommendation = "HOLD LONG"
                 elif last_price > last_sl:
                     recommendation = "HOLD LONG"
                 else:
@@ -2292,7 +2360,10 @@ def run_bb_screener(list_path, list_type):
                     'change_pct': round(change_pct, 2),
                     'volume': float(last_volume),
                     'value': round(value_in_millions, 2),
-                    'recommendation': recommendation
+                    'recommendation': recommendation,
+                    'adx': round(float(adx_series.iloc[-1]), 2) if not np.isnan(float(adx_series.iloc[-1])) else None,
+                    'pdi': round(float(pdi_series.iloc[-1]), 2) if not np.isnan(float(pdi_series.iloc[-1])) else None,
+                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None
                 }
                 
                 bb_screener_progress['results'].append(result_item)
