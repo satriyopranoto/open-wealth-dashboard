@@ -446,7 +446,7 @@
 </footer>
 </div>
 <script>
-        const API_BASE_URL = "{{ api_base_url }}";
+        const API_BASE_URL = window.location.origin;
         
         async function refreshData() {
             const ticker = document.getElementById('ticker').value.toUpperCase();
@@ -650,6 +650,12 @@
                                 if (eventSource) eventSource.close();
                                 extractionProgress.classList.add('hidden');
                                 statusDiv.textContent = `SCREENER COMPLETE: Loaded from cache (${screenerData.count} stocks)`;
+                                statusDiv.className = 'success text-[#4ade80]';
+                            } else {
+                                hasCompleted = true;
+                                if (eventSource) eventSource.close();
+                                extractionProgress.classList.add('hidden');
+                                statusDiv.textContent = `SCREENER COMPLETE: ${screenerData.count} stocks analyzed`;
                                 statusDiv.className = 'success text-[#4ade80]';
                             }
                             renderScreenerResults(titleText, screenerData.data);

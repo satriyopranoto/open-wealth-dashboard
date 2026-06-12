@@ -2566,11 +2566,9 @@ def screener_bb_progress():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
-    
     def generate():
         last_progress = None
-        idle_loops = 0
-        seen_non_idle = False  # track if we've seen a fresh state
+        seen_fresh = False  # track if we've seen a fresh (non-terminal) state
         
         while True:
             global bb_screener_progress
@@ -2584,26 +2582,28 @@ def screener_bb_progress():
                 'message': bb_screener_progress['message']
             }
             
-            # Skip stale 'completed'/'error' state at startup
-            # Only yield when state actually changes from the initial value
-            if last_progress is None and current_progress['status'] in ['completed', 'error']:
+            # Skip stale 'completed'/'error'/'idle' state at startup
+            # Wait until a fresh non-terminal state ('starting'/'running') appears
+            if not seen_fresh and current_progress['status'] in ['completed', 'error', 'idle']:
                 last_progress = current_progress.copy()
                 time.sleep(1)
                 continue
             
+            if current_progress['status'] not in ['completed', 'error']:
+                seen_fresh = True
+            
             if current_progress != last_progress:
                 last_progress = current_progress.copy()
-                
                 yield f"data: {json.dumps(current_progress)}\n\n"
             
-            if bb_screener_progress['status'] in ['completed', 'error']:
+            # Only break on terminal state AFTER we've seen fresh progress
+            if seen_fresh and bb_screener_progress['status'] in ['completed', 'error']:
                 break
             
             time.sleep(1)
     
     from flask import Response
     return Response(generate(), mimetype='text/event-stream')
-
 
 def run_fundamental_screener(list_path, list_type):
     """
