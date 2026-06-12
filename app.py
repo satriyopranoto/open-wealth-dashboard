@@ -148,13 +148,20 @@ def load_cached_screener(screener_name, extraction_list_name=None):
         
         if extraction_list_name:
             extraction_time = get_last_extraction_time(extraction_list_name)
-            if extraction_time is None:
-                print(f"Tidak ada marker ekstraksi untuk {extraction_list_name}, cache dianggap basi")
-                return None, None, None
-            if cache_mtime <= extraction_time:
-                print(f"Cache screener {screener_name} lebih lama dari ekstraksi terakhir, jalankan ulang")
-                return None, None, None
-            print(f"Data screener {screener_name} dimuat dari cache (lebih baru dari ekstraksi)")
+            if extraction_time is not None:
+                # Marker ada -- bandingkan cache dengan marker extraction
+                if cache_mtime <= extraction_time:
+                    print(f"Cache screener {screener_name} lebih lama dari ekstraksi terakhir, jalankan ulang")
+                    return None, None, None
+                print(f"Data screener {screener_name} dimuat dari cache (lebih baru dari ekstraksi)")
+            else:
+                # Marker gak ada -- fallback ke TTL 1 jam
+                cached_time = datetime.fromisoformat(metadata['timestamp'])
+                age = datetime.now() - cached_time
+                if age.total_seconds() > 1 * 60 * 60:
+                    print(f"Cache screener untuk {screener_name} sudah kadaluarsa ({age.total_seconds() / 3600:.1f} jam), marker extraction tidak ada")
+                    return None, None, None
+                print(f"Data screener {screener_name} dimuat dari cache (usia: {age.total_seconds() / 3600:.1f} jam) -- marker extraction tidak ada")
         else:
             cached_time = datetime.fromisoformat(metadata['timestamp'])
             age = datetime.now() - cached_time
