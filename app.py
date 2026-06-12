@@ -2417,6 +2417,12 @@ def screener_us_bb_breakout():
     
     global bb_screener_progress
     
+    # Check if already running BEFORE resetting anything
+    if bb_screener_progress['is_running']:
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
+    
     # Reset progress immediately to avoid stale SSE state from previous run
     bb_screener_progress['status'] = 'starting'
     bb_screener_progress['current_ticker'] = ''
@@ -2434,21 +2440,27 @@ def screener_us_bb_breakout():
         bb_screener_progress['results'] = cached_data.to_dict('records')
         bb_screener_progress['status'] = 'completed'
         bb_screener_progress['progress'] = len(cached_data)
+        # Bersihin NaN dari cached data sebelum jsonify
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
             "count": len(cached_data),
-            "data": cached_data.to_dict('records'),
+            "data": clean_records,
             "from_cache": True,
             "cache_timestamp": metadata['timestamp']
         })
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
-    
-    if bb_screener_progress['is_running']:
-        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
-                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
-        return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     if not os.path.exists(uslist_path):
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
@@ -2499,6 +2511,12 @@ def screener_id_bb_breakout():
     
     global bb_screener_progress
     
+    # Check if already running BEFORE resetting anything
+    if bb_screener_progress['is_running']:
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
+    
     # Reset progress immediately to avoid stale SSE state from previous run
     bb_screener_progress['status'] = 'starting'
     bb_screener_progress['current_ticker'] = ''
@@ -2516,21 +2534,27 @@ def screener_id_bb_breakout():
         bb_screener_progress['results'] = cached_data.to_dict('records')
         bb_screener_progress['status'] = 'completed'
         bb_screener_progress['progress'] = len(cached_data)
+        # Bersihin NaN dari cached data sebelum jsonify
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        
         return jsonify({
             "status": "success",
             "message": "Data dari cache",
             "count": len(cached_data),
-            "data": cached_data.to_dict('records'),
+            "data": clean_records,
             "from_cache": True,
             "cache_timestamp": metadata['timestamp']
         })
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
-    
-    if bb_screener_progress['is_running']:
-        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
-                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
-        return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     if not os.path.exists(idlist_path):
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
@@ -2596,7 +2620,17 @@ def screener_bb_progress():
             if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
                 if current_progress != last_progress:
                     yield "data: " + json.dumps(current_progress) + "\n\n"
+                # Clean break — no reconnect needed, status already final
                 break
+            
+            # If API just reset state but we had completed before -> check if data exists
+            if current_progress['status'] == 'starting' and current_progress['results_count'] == 0:
+                # Brief yield to let frontend know state changed, then wait for API
+                if current_progress != last_progress:
+                    last_progress = current_progress.copy()
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                time.sleep(1)
+                continue
 
             # Skip stale idle, timeout after 30s zombie cleanup
             if current_progress['status'] == 'idle':

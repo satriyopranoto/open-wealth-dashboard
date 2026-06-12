@@ -611,8 +611,11 @@
                     };
                     
                     eventSource.onerror = function() {
-                        statusDiv.textContent = 'CONNECTION LOST';
-                        statusDiv.className = 'error text-red-400';
+                        // Jangan overwrite kalau sudah completed dari onmessage
+                        if (!hasCompleted) {
+                            statusDiv.textContent = 'CONNECTION LOST';
+                            statusDiv.className = 'error text-red-400';
+                        }
                         if (eventSource) {
                             eventSource.close();
                         }
@@ -856,8 +859,10 @@
                 };
                 
                 eventSource.onerror = function() {
-                    statusDiv.textContent = 'CONNECTION LOST';
-                    statusDiv.className = 'error text-red-400';
+                    if (!hasCompleted) {
+                        statusDiv.textContent = 'CONNECTION LOST';
+                        statusDiv.className = 'error text-red-400';
+                    }
                     if (eventSource) {
                         eventSource.close();
                         eventSource = null;
