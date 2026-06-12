@@ -2424,6 +2424,7 @@ def screener_us_bb_breakout():
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
         # Update progress with cached result so SSE has fresh state
+        bb_screener_progress['results'] = cached_data.to_dict('records')
         bb_screener_progress['status'] = 'completed'
         bb_screener_progress['progress'] = len(cached_data)
         return jsonify({
@@ -2505,6 +2506,7 @@ def screener_id_bb_breakout():
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
                   detail=f'cached: {len(cached_data)} results')
         # Update progress with cached result so SSE has fresh state
+        bb_screener_progress['results'] = cached_data.to_dict('records')
         bb_screener_progress['status'] = 'completed'
         bb_screener_progress['progress'] = len(cached_data)
         return jsonify({
@@ -2568,11 +2570,12 @@ def screener_bb_progress():
         return response
     def generate():
         last_progress = None
-        seen_fresh = False  # track if we've seen a fresh (non-terminal) state
-        
+        idle_loops = 0
+        max_idle_loops = 30
+
         while True:
             global bb_screener_progress
-            
+
             current_progress = {
                 'status': bb_screener_progress['status'],
                 'current_ticker': bb_screener_progress['current_ticker'],
@@ -2581,27 +2584,31 @@ def screener_bb_progress():
                 'results_count': len(bb_screener_progress['results']),
                 'message': bb_screener_progress['message']
             }
-            
-            # Skip stale 'completed'/'error'/'idle' state at startup
-            # Wait until a fresh non-terminal state ('starting'/'running') appears
-            if not seen_fresh and current_progress['status'] in ['completed', 'error', 'idle']:
+
+            # Cache hit: completed with results -> fresh, emit and break
+            if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
+                if current_progress != last_progress:
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                break
+
+            # Skip stale idle, timeout after 30s zombie cleanup
+            if current_progress['status'] == 'idle':
+                idle_loops += 1
+                if idle_loops >= max_idle_loops:
+                    break
                 last_progress = current_progress.copy()
                 time.sleep(1)
                 continue
-            
-            if current_progress['status'] not in ['completed', 'error']:
-                seen_fresh = True
-            
+
             if current_progress != last_progress:
                 last_progress = current_progress.copy()
-                yield f"data: {json.dumps(current_progress)}\n\n"
-            
-            # Only break on terminal state AFTER we've seen fresh progress
-            if seen_fresh and bb_screener_progress['status'] in ['completed', 'error']:
+                yield "data: " + json.dumps(current_progress) + "\n\n"
+
+            if current_progress['status'] in ['completed', 'error']:
                 break
-            
+
             time.sleep(1)
-    
+
     from flask import Response
     return Response(generate(), mimetype='text/event-stream')
 
