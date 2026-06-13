@@ -1124,21 +1124,40 @@ def analyze_stock():
         last_high = float(data['High'].iloc[-1])
         last_low = float(data['Low'].iloc[-1])
         last_price = float(data['Close'].iloc[-1])
+        
+        # Hitung Bollinger Bands & ADX untuk rekomendasi (samakan dengan BB Screener)
+        upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+        adx_series, pdi_series, mdi_series = calculate_adx(data)
+        
+        last_upper_bb = float(upper_bb.iloc[-1])
+        last_adx = float(adx_series.iloc[-1])
+        last_pdi = float(pdi_series.iloc[-1])
+        last_mdi = float(mdi_series.iloc[-1])
+        adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+        
+        adx_rising = last_adx > adx_5ago
+        pdi_above_mdi = last_pdi > last_mdi
+        adx_strong = last_adx > 25
 
-        # --- Logika Rekomendasi ---
-        # BUY if low > sl | SELL if high < sl
-        if last_low > last_sl:
-            recommendation = "REKOMENDASI: BUY"
-            color = "#4ade80" # Green
-            icon = "🟢"
-        elif last_high < last_sl:
-            recommendation = "REKOMENDASI: SELL / WAIT"
-            color = "#f87171" # Red
-            icon = "🔴"
-        else:
-            recommendation = "REKOMENDASI: NEUTRAL / HOLD"
-            color = "gray"
+        # --- Logika Rekomendasi (samakan dengan BB Screener) ---
+        if last_price > last_sl and last_price > last_upper_bb:
+            if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
+                    and pdi_above_mdi and adx_strong and adx_rising):
+                recommendation = "REKOMENDASI: BUY"
+                color = "#4ade80"
+                icon = "🟢"
+            else:
+                recommendation = "REKOMENDASI: HOLD LONG"
+                color = "#fbbf24"
+                icon = "🟡"
+        elif last_price > last_sl:
+            recommendation = "REKOMENDASI: HOLD LONG"
+            color = "#fbbf24"
             icon = "🟡"
+        else:
+            recommendation = "REKOMENDASI: SHORT SELL"
+            color = "#f87171"
+            icon = "🔴"
 
 
         # 3. Persiapan Data untuk Grafik
@@ -1152,8 +1171,7 @@ def analyze_stock():
             
         df_plot = data.copy()
         
-        # Hitung ADX
-        adx_series, pdi_series, mdi_series = calculate_adx(df_plot)
+        # ADX sudah dihitung di atas untuk rekomendasi
         
         # Plotting
         # --- Bagian Plotting ---
