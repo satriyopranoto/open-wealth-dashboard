@@ -1137,6 +1137,7 @@ def analyze_stock():
         
         adx_rising = last_adx > adx_5ago
         pdi_above_mdi = last_pdi > last_mdi
+        mdi_above_pdi = last_mdi > last_pdi
         adx_strong = last_adx > 25
 
         # --- Logika Rekomendasi (samakan dengan BB Screener) ---
@@ -1151,9 +1152,16 @@ def analyze_stock():
                 color = "#fbbf24"
                 icon = "🟡"
         elif last_price > last_sl:
-            recommendation = "REKOMENDASI: HOLD LONG"
-            color = "#fbbf24"
-            icon = "🟡"
+            # Bearish ADX confirmation -> SELL meski masih di atas SL
+            if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
+                    and mdi_above_pdi and adx_strong):
+                recommendation = "REKOMENDASI: SHORT SELL"
+                color = "#f87171"
+                icon = "🔴"
+            else:
+                recommendation = "REKOMENDASI: HOLD LONG"
+                color = "#fbbf24"
+                icon = "🟡"
         else:
             recommendation = "REKOMENDASI: SHORT SELL"
             color = "#f87171"
