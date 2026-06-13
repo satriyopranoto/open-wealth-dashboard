@@ -1195,6 +1195,8 @@ def analyze_stock():
         ax2.axhline(y=20, color='gray', linewidth=0.8, linestyle=':', alpha=0.5)
         
         ax2.set_ylabel('ADX', fontsize=12)
+        ax2.yaxis.set_label_position("right")
+        ax2.tick_params(labelright=True, labelleft=False)
         ax2.set_xlabel('Tanggal', fontsize=12)
         ax2.legend(loc='upper left')
         ax2.set_ylim(0, 60)
