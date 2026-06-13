@@ -928,11 +928,16 @@
                         iconRes.textContent = '◆';
                         recText.textContent = 'STRATEGIC DIRECTIVE: BUY / ACCUMULATE';
                         recText.style.color = '#4ade80';
-                    } else {
+                    } else if (data.recommendation.includes('SHORT SELL')) {
                         recBox.style.borderLeftColor = '#f87171';
+                        iconRes.textContent = '▼';
+                        recText.textContent = 'STRATEGIC DIRECTIVE: SELL / REDUCE';
+                        recText.style.color = '#f87171';
+                    } else {
+                        recBox.style.borderLeftColor = '#fbbf24';
                         iconRes.textContent = '◇';
                         recText.textContent = 'STRATEGIC DIRECTIVE: HOLD / PROTECT';
-                        recText.style.color = '#f87171';
+                        recText.style.color = '#fbbf24';
                     }
 
                     if (data.fundamental) {
