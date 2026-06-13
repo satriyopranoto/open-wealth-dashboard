@@ -1172,6 +1172,10 @@ def analyze_stock():
 
         ax1.set_ylabel("Harga (USD)", color='black', fontsize=12)
         ax1.set_title(f"Analisis Saham {ticker}", fontsize=14, fontweight='bold')
+        
+        # Pindahkan sumbu Y harga ke kanan
+        ax1.yaxis.set_label_position("right")
+        ax1.tick_params(labelright=True, labelleft=False)
 
         # Plot Stop Loss
         ax1.plot(df_plot.index, sl_series, color='orange', linewidth=2, label='Stop Loss (SL)', linestyle='--')
