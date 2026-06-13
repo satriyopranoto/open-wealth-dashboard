@@ -1152,11 +1152,14 @@ def analyze_stock():
             
         df_plot = data.copy()
         
+        # Hitung ADX
+        adx_series, pdi_series, mdi_series = calculate_adx(df_plot)
+        
         # Plotting
         # --- Bagian Plotting ---
-        fig, ax = plt.subplots(figsize=(14, 8))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={"height_ratios": [3, 1]})
         
-        # 1. Plot Candlestick Sederhana pada ax (Sumbu Y Kiri - Harga)
+        # 1. Plot Candlestick Sederhana pada ax1 (Sumbu Y Kiri - Harga)
         open_vals = df_plot['Open'].values
         high_vals = df_plot['High'].values
         low_vals = df_plot['Low'].values
@@ -1164,18 +1167,36 @@ def analyze_stock():
 
         for i in range(len(df_plot)):
             color = 'green' if close_vals[i] >= open_vals[i] else 'red'
-            ax.plot([df_plot.index[i], df_plot.index[i]], [low_vals[i], high_vals[i]], color=color, linewidth=1)
-            ax.plot([df_plot.index[i], df_plot.index[i]], [open_vals[i], close_vals[i]], color=color, linewidth=3) 
+            ax1.plot([df_plot.index[i], df_plot.index[i]], [low_vals[i], high_vals[i]], color=color, linewidth=1)
+            ax1.plot([df_plot.index[i], df_plot.index[i]], [open_vals[i], close_vals[i]], color=color, linewidth=3) 
 
-        ax.set_ylabel("Harga (USD)", color='black', fontsize=12)
-        ax.set_title(f"Analisis Saham {ticker}", fontsize=14, fontweight='bold')
+        ax1.set_ylabel("Harga (USD)", color='black', fontsize=12)
+        ax1.set_title(f"Analisis Saham {ticker}", fontsize=14, fontweight='bold')
 
         # Plot Stop Loss
-        ax.plot(df_plot.index, sl_series, color='orange', linewidth=2, label='Stop Loss (SL)', linestyle='--')
-        ax.legend(loc='upper left')
+        ax1.plot(df_plot.index, sl_series, color='orange', linewidth=2, label='Stop Loss (SL)', linestyle='--')
+        ax1.legend(loc='upper left')
         
-        # Format Tanggal
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        # Format Tanggal ax1 (sembunyikan xticks biar rapi)
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        ax1.tick_params(labelbottom=False)
+        
+        # 2. Plot ADX, +DI, -DI pada ax2
+        ax2.plot(df_plot.index, adx_series, color='purple', linewidth=2, label='ADX')
+        ax2.plot(df_plot.index, pdi_series, color='green', linewidth=1.5, label='+DI', linestyle='--')
+        ax2.plot(df_plot.index, mdi_series, color='red', linewidth=1.5, label='-DI', linestyle='--')
+        
+        # ADX Reference lines
+        ax2.axhline(y=25, color='gray', linewidth=1, linestyle=':', alpha=0.7)
+        ax2.axhline(y=20, color='gray', linewidth=0.8, linestyle=':', alpha=0.5)
+        
+        ax2.set_ylabel('ADX', fontsize=12)
+        ax2.set_xlabel('Tanggal', fontsize=12)
+        ax2.legend(loc='upper left')
+        ax2.set_ylim(0, 60)
+        
+        # Format Tanggal untuk ax2
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
         plt.xticks(rotation=45)
         
         fig.tight_layout()
@@ -1217,6 +1238,9 @@ def analyze_stock():
             "date": str(current_date),
             "chart_image": base64_image,
             "last_sl": float(last_sl), # Tambahkan ini
+            "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
+            "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,
+            "mdi": float(mdi_series.iloc[-1]) if not np.isnan(float(mdi_series.iloc[-1])) else None,
             "cache_timestamp": cache_timestamp, # Tambahkan timestamp cache
             "news": news_items, # Tambahkan related news
             "fundamental": {
