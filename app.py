@@ -2444,11 +2444,6 @@ def screener_us_bb_breakout():
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
-    # Rate limit check -- cek SEBELUM reset biar gak double-run
-    safe, left, msg = check_screener_cooldown('us-bb-breakout')
-    if not safe:
-        return jsonify({"status": "error", "message": msg}), 429
-    
     # Reset progress immediately to avoid stale SSE state from previous run
     bb_screener_progress['status'] = 'starting'
     bb_screener_progress['current_ticker'] = ''
@@ -2494,6 +2489,11 @@ def screener_us_bb_breakout():
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
+        # Rate limit check -- baru cek pas mau beneran run
+        safe, left, msg = check_screener_cooldown('us-bb-breakout')
+        if not safe:
+            return jsonify({"status": "error", "message": msg}), 429
+        
         # Set is_running flag & touch marker SEBELUM run biar cooldown aktif
         bb_screener_progress['is_running'] = True
         touch_screener_marker('us-bb-breakout')
@@ -2547,11 +2547,6 @@ def screener_id_bb_breakout():
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
-    # Rate limit check -- cek SEBELUM reset biar gak double-run
-    safe, left, msg = check_screener_cooldown('id-bb-breakout')
-    if not safe:
-        return jsonify({"status": "error", "message": msg}), 429
-    
     # Reset progress immediately to avoid stale SSE state from previous run
     bb_screener_progress['status'] = 'starting'
     bb_screener_progress['current_ticker'] = ''
@@ -2597,6 +2592,11 @@ def screener_id_bb_breakout():
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
+        # Rate limit check -- baru cek pas mau beneran run
+        safe, left, msg = check_screener_cooldown('id-bb-breakout')
+        if not safe:
+            return jsonify({"status": "error", "message": msg}), 429
+        
         # Set is_running flag & touch marker SEBELUM run biar cooldown aktif
         bb_screener_progress['is_running'] = True
         touch_screener_marker('id-bb-breakout')
