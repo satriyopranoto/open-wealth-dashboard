@@ -12,11 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-warm matplotlib font cache saat build image, bukan saat runtime
-RUN python -c 'import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot'
-
 # Copy source code
-COPY app.py downloader.py log_utils.py ./
+COPY app.py bokeh_chart.py downloader.py log_utils.py ./
 COPY uslist.csv idlist.csv ./
 COPY templates/ templates/
 COPY assets/ assets/

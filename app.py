@@ -4,11 +4,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from yahooquery import Screener
-import matplotlib
-matplotlib.use('Agg')  # Gunakan backend non-interactive (tidak keluar jendela)
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import io
+from bokeh_chart import generate_chart
 import os
 import json
 import time
@@ -1181,66 +1177,11 @@ def analyze_stock():
         
         # ADX sudah dihitung di atas untuk rekomendasi
         
-        # Plotting
-        # --- Bagian Plotting ---
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={"height_ratios": [3, 1]})
-        
-        # 1. Plot Candlestick Sederhana pada ax1 (Sumbu Y Kiri - Harga)
-        open_vals = df_plot['Open'].values
-        high_vals = df_plot['High'].values
-        low_vals = df_plot['Low'].values
-        close_vals = df_plot['Close'].values
-
-        for i in range(len(df_plot)):
-            color = 'green' if close_vals[i] >= open_vals[i] else 'red'
-            ax1.plot([df_plot.index[i], df_plot.index[i]], [low_vals[i], high_vals[i]], color=color, linewidth=1)
-            ax1.plot([df_plot.index[i], df_plot.index[i]], [open_vals[i], close_vals[i]], color=color, linewidth=3) 
-
-        ax1.set_ylabel("Harga (USD)", color='black', fontsize=12)
-        ax1.set_title(f"Analisis Saham {ticker}", fontsize=14, fontweight='bold')
-        
-        # Pindahkan sumbu Y harga ke kanan
-        ax1.yaxis.set_label_position("right")
-        ax1.tick_params(labelright=True, labelleft=False)
-
-        # Plot Stop Loss
-        ax1.plot(df_plot.index, sl_series, color='orange', linewidth=2, label='Stop Loss (SL)', linestyle='--')
-        ax1.legend(loc='upper left')
-        
-        # Format Tanggal ax1 (sembunyikan xticks biar rapi)
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-        ax1.tick_params(labelbottom=False)
-        
-        # 2. Plot ADX, +DI, -DI pada ax2
-        ax2.plot(df_plot.index, adx_series, color='purple', linewidth=2, label='ADX')
-        ax2.plot(df_plot.index, pdi_series, color='green', linewidth=1.5, label='+DI', linestyle='--')
-        ax2.plot(df_plot.index, mdi_series, color='red', linewidth=1.5, label='-DI', linestyle='--')
-        
-        # ADX Reference lines
-        ax2.axhline(y=25, color='gray', linewidth=1, linestyle=':', alpha=0.7)
-        ax2.axhline(y=20, color='gray', linewidth=0.8, linestyle=':', alpha=0.5)
-        
-        ax2.set_ylabel('ADX', fontsize=12)
-        ax2.yaxis.set_label_position("right")
-        ax2.tick_params(labelright=True, labelleft=False)
-        ax2.set_xlabel('Tanggal', fontsize=12)
-        ax2.legend(loc='upper left')
-        ax2.set_ylim(0, 60)
-        
-        # Format Tanggal untuk ax2
-        ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-        plt.xticks(rotation=45)
-        
-        fig.tight_layout()
-        
-        # 4. Simpan ke Base64
-        img_bytes = io.BytesIO()
-        plt.savefig(img_bytes, format='png', dpi=150, bbox_inches='tight')
-        img_bytes.seek(0)
-        
-        import base64
-        base64_image = base64.b64encode(img_bytes.read()).decode('utf-8')
-        plt.close(fig) # Gunakan fig agar cleanup lebih bersih
+        # ── Bokeh Interactive Chart ──
+        chart_json = generate_chart(
+            ticker, df_plot, sl_series,
+            adx_series, pdi_series, mdi_series,
+        )
         
         # 5. Download Data Fundamental
         fundamental_data, fundamental_error = download_fundamental_data(ticker, force_refresh=force_refresh)
@@ -1268,7 +1209,7 @@ def analyze_stock():
             "recommendation": recommendation,
             "last_price": float(last_price),
             "date": str(current_date),
-            "chart_image": base64_image,
+            "chart_json": chart_json,
             "last_sl": float(last_sl), # Tambahkan ini
             "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
             "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,

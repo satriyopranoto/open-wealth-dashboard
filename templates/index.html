@@ -10,6 +10,8 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.9.1.min.js"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.9.1.min.js"></script>
 <style>
         :root {
             --primary-gold: #d4af37;
@@ -130,7 +132,7 @@
             font-weight: 600;
         }
 
-        #stock-chart-img {
+        #bokeh-chart {
             filter: contrast(1.1) brightness(0.9);
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
@@ -283,7 +285,7 @@
 </div>
 <!-- Visualization -->
 <div class="glass-panel p-4 overflow-hidden" id="chart-container">
-<img alt="Stock Analysis Chart" class="w-full rounded-sm hidden shadow-2xl" id="stock-chart-img" src=""/>
+<div id="bokeh-chart" class="w-full"></div>
 </div>
 <!-- Insights -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -993,7 +995,7 @@
                     }
 
                     resultArea.classList.remove('hidden');
-                    renderChart(data.chart_image);
+                    renderChart(data.chart_json);
                     calculateLotSize();
                 } else {
                     statusDiv.textContent = 'EXECUTION FAILURE';
@@ -1036,10 +1038,14 @@
             resultMoneySizeDiv.textContent = Math.floor(calculatedMoneySize).toLocaleString();
         }
 
-        function renderChart(base64Image) {
-            const imgTag = document.getElementById('stock-chart-img');
-            imgTag.src = "data:image/png;base64," + base64Image;
-            imgTag.classList.remove('hidden');
+        function renderChart(chartJson) {
+            const container = document.getElementById('bokeh-chart');
+            container.innerHTML = '';
+            if (typeof Bokeh !== 'undefined' && Bokeh.embed) {
+                Bokeh.embed.embed_item(chartJson, container);
+            } else {
+                container.innerHTML = '<p class="text-red-400 text-sm">BokehJS failed to load. Check internet connection.</p>';
+            }
         }
 
         function setFairPriceValue(elementId, fairPrice, currentPrice) {
