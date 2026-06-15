@@ -7,7 +7,7 @@ Uses json_item for embedding in Flask JSON responses.
 import numpy as np
 import pandas as pd
 from bokeh.plotting import figure
-from bokeh.embed import json_item
+from bokeh.embed import components
 from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
@@ -164,13 +164,19 @@ def _main_hover(p, df):
 def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_series):
     """
     Generate a full interactive Bokeh chart layout.
-    Returns dict for Bokeh.embed.embed_item() (via json_item).
+
+    Returns
+    -------
+    dict
+        {"script": str, "div": str} — Bokeh components for HTML embedding.
     """
     df = df_plot.copy()
     df["idx"] = np.arange(len(df))
 
     p1 = _make_base_figure(
         height=420,
+        sizing_mode="stretch_width",
+        y_axis_location="right",
         title=f"Analisis Saham {ticker}",
         x_range=Range1d(-0.5, len(df) - 0.5),
     )
@@ -184,7 +190,7 @@ def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_serie
     _main_hover(p1, df)
     p1.add_tools(CrosshairTool(line_color="#666666", line_alpha=0.4))
 
-    p2 = _make_base_figure(height=160, x_range=p1.x_range)
+    p2 = _make_base_figure(height=160, sizing_mode="stretch_width", y_axis_location="right", x_range=p1.x_range)
     p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
     p2.yaxis.axis_label = "ADX"
     p2.yaxis.axis_label_text_color = COLORS["text"]
@@ -211,4 +217,7 @@ def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_serie
         fig.legend.click_policy = "hide"
 
     layout = column(p1, p2, sizing_mode="stretch_width", spacing=0)
-    return json_item(layout, target="bokeh-chart")
+    script, div = components(layout)
+    # Strip <script> tags — we inject via JS dynamically
+    script_body = script.replace("<script>", "").replace("</script>", "").strip()
+    return {"script": script_body, "div": div}
