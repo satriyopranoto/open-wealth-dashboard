@@ -1209,7 +1209,8 @@ def analyze_stock():
             "recommendation": recommendation,
             "last_price": float(last_price),
             "date": str(current_date),
-            "chart_json": chart_json,
+            "chart_div": chart_json["div"],
+            "chart_script": chart_json["script"],
             "last_sl": float(last_sl), # Tambahkan ini
             "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
             "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,

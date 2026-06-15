@@ -995,7 +995,7 @@
                     }
 
                     resultArea.classList.remove('hidden');
-                    renderChart(data.chart_json);
+                    renderChart(data);
                     calculateLotSize();
                 } else {
                     statusDiv.textContent = 'EXECUTION FAILURE';
@@ -1038,14 +1038,19 @@
             resultMoneySizeDiv.textContent = Math.floor(calculatedMoneySize).toLocaleString();
         }
 
-        function renderChart(chartJson) {
+        function renderChart(data) {
             const container = document.getElementById('bokeh-chart');
-            container.innerHTML = '';
-            if (typeof Bokeh !== 'undefined' && Bokeh.embed) {
-                Bokeh.embed.embed_item(chartJson, container);
-            } else {
-                container.innerHTML = '<p class="text-red-400 text-sm">BokehJS failed to load. Check internet connection.</p>';
+            container.innerHTML = '<div class="text-center text-[#99907c] py-8">Loading chart...</div>';
+            if (!data || !data.chart_div) {
+                container.innerHTML = '<p class="text-red-400 text-sm">No chart data received.</p>';
+                return;
             }
+            // Set the div (container for Bokeh)
+            container.innerHTML = data.chart_div;
+            // Create script element and inject it (creates proper execution context)
+            const scriptEl = document.createElement('script');
+            scriptEl.textContent = data.chart_script;
+            container.appendChild(scriptEl);
         }
 
         function setFairPriceValue(elementId, fairPrice, currentPrice) {
