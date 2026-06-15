@@ -73,6 +73,7 @@ fundamental_screener_progress = {
 
 # Rate limit threshold dalam menit
 RATE_LIMIT_MINUTES = 60
+SCREENER_COOLDOWN_MINUTES = 30  # BB Screener minimal jeda antar eksekusi
 CACHE_DIR = os.path.join(os.path.dirname(__file__), 'cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -334,6 +335,28 @@ def create_extraction_marker(list_path):
         print(f"[RATE_LIMIT] Created marker file: {marker_file}", flush=True)
     except Exception as e:
         print(f"Error creating extraction marker: {e}")
+
+def check_screener_cooldown(screener_name):
+    marker_file = os.path.join(CACHE_DIR, f".screener_{screener_name}_marker.txt")
+    if not os.path.exists(marker_file):
+        return True, 0, ""
+    try:
+        diff_minutes = (time.time() - os.path.getmtime(marker_file)) / 60
+        if diff_minutes < SCREENER_COOLDOWN_MINUTES:
+            left = int(SCREENER_COOLDOWN_MINUTES - diff_minutes)
+            return False, left, f"BB Screener sudah dijalankan. Harap tunggu {left} menit lagi."
+        return True, 0, ""
+    except Exception as e:
+        print(f"Error checking screener cooldown: {e}")
+        return True, 0, ""
+
+def touch_screener_marker(screener_name):
+    try:
+        marker_file = os.path.join(CACHE_DIR, f".screener_{screener_name}_marker.txt")
+        with open(marker_file, 'w') as f:
+            f.write(f"Last BB Screener run: {datetime.now().isoformat()}\n")
+    except Exception as e:
+        print(f"Error creating screener marker: {e}")
 
 def load_cached_fundamental(ticker):
     """
@@ -2466,7 +2489,13 @@ def screener_us_bb_breakout():
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
+        # Rate limit check untuk BB Screener
+        safe, left, msg = check_screener_cooldown('us-bb-breakout')
+        if not safe:
+            return jsonify({"status": "error", "message": msg}), 429
+        
         run_bb_screener(uslist_path, 'US')
+        touch_screener_marker('us-bb-breakout')
         
         if bb_screener_progress['results']:
             results_df = pd.DataFrame(bb_screener_progress['results'])
@@ -2560,7 +2589,13 @@ def screener_id_bb_breakout():
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
+        # Rate limit check untuk BB Screener
+        safe, left, msg = check_screener_cooldown('id-bb-breakout')
+        if not safe:
+            return jsonify({"status": "error", "message": msg}), 429
+        
         run_bb_screener(idlist_path, 'ID')
+        touch_screener_marker('id-bb-breakout')
         
         if bb_screener_progress['results']:
             results_df = pd.DataFrame(bb_screener_progress['results'])
