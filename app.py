@@ -1177,9 +1177,9 @@ def analyze_stock():
         last_adx = float(adx_series.iloc[-1])
         last_pdi = float(pdi_series.iloc[-1])
         last_mdi = float(mdi_series.iloc[-1])
-        adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+        pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
         
-        adx_rising = last_adx > adx_5ago
+        pdi_rising = last_pdi > pdi_5ago
         pdi_above_mdi = last_pdi > last_mdi
         mdi_above_pdi = last_mdi > last_pdi
         adx_strong = last_adx > 25
@@ -1187,7 +1187,7 @@ def analyze_stock():
         # --- Logika Rekomendasi (samakan dengan BB Screener) ---
         if last_price > last_sl and last_price > last_upper_bb:
             if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
-                    and pdi_above_mdi and adx_strong and adx_rising):
+                    and pdi_above_mdi and adx_strong and pdi_rising):
                 recommendation = "REKOMENDASI: BUY"
                 color = "#4ade80"
                 icon = "🟢"
@@ -2387,16 +2387,16 @@ def run_bb_screener(list_path, list_type):
                 last_adx = float(adx_series.iloc[-1])
                 last_pdi = float(pdi_series.iloc[-1])
                 last_mdi = float(mdi_series.iloc[-1])
-                adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+                pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
 
-                adx_rising = last_adx > adx_5ago
+                pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
                 adx_strong = last_adx > 25
 
                 if last_price > last_sl and last_price > last_upper_bb:
                     # BUY: harga breakout BB + konfirmasi ADX
                     if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
-                            and pdi_above_mdi and adx_strong and adx_rising):
+                            and pdi_above_mdi and adx_strong and pdi_rising):
                         recommendation = "BUY"
                     else:
                         # Breakout tanpa konfirmasi ADX = HOLD
