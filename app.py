@@ -358,6 +358,31 @@ def touch_screener_marker(screener_name):
     except Exception as e:
         print(f"Error creating screener marker: {e}")
 
+def check_extraction_marker_exists(list_name):
+    """Cek apakah marker data sync (extraction) sudah ada."""
+    marker_file = os.path.join(CACHE_DIR, f".extraction_{list_name}_marker.txt")
+    return os.path.exists(marker_file)
+
+def is_bb_screener_up_to_date(screener_name, list_name):
+    """
+    Cek apakah BB screener masih up-to-date dibanding extraction marker.
+    Return True jika BB marker >= extraction marker (data masih valid).
+    Return False jika BB marker tidak ada atau lebih lama dari extraction marker.
+    """
+    screener_marker = os.path.join(CACHE_DIR, f".screener_{screener_name}_marker.txt")
+    extraction_marker = os.path.join(CACHE_DIR, f".extraction_{list_name}_marker.txt")
+
+    if not os.path.exists(screener_marker):
+        return False
+
+    if not os.path.exists(extraction_marker):
+        return False
+
+    screener_mtime = os.path.getmtime(screener_marker)
+    extraction_mtime = os.path.getmtime(extraction_marker)
+
+    return screener_mtime >= extraction_mtime
+
 def load_cached_fundamental(ticker):
     """
     Memuat data fundamental dari cache jika ada dan masih valid (maksimal 1 hari)
@@ -2453,33 +2478,43 @@ def screener_us_bb_breakout():
     bb_screener_progress['message'] = 'Initializing...'
     bb_screener_progress['is_running'] = False
     
-    cached_data, metadata, error = load_cached_screener('us-bb-breakout', 'uslist')
-    if cached_data is not None:
-        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
-                  detail=f'cached: {len(cached_data)} results')
-        # Update progress with cached result so SSE has fresh state
-        bb_screener_progress['results'] = cached_data.to_dict('records')
-        bb_screener_progress['status'] = 'completed'
-        bb_screener_progress['progress'] = len(cached_data)
-        # Bersihin NaN dari cached data sebelum jsonify
-        clean_records = []
-        for item in cached_data.to_dict('records'):
-            cleaned = {}
-            for k, v in item.items():
-                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
-                    cleaned[k] = None
-                else:
-                    cleaned[k] = v
-            clean_records.append(cleaned)
-        
+    # STEP 1: Check data sync marker (extraction marker)
+    if not check_extraction_marker_exists('uslist'):
+        log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
+                  detail='Data sync not run yet')
         return jsonify({
-            "status": "success",
-            "message": "Data dari cache",
-            "count": len(cached_data),
-            "data": clean_records,
-            "from_cache": True,
-            "cache_timestamp": metadata['timestamp']
-        })
+            "status": "error",
+            "message": "Please run data synchronization"
+        }), 400
+    
+    # STEP 2: Check if BB screener is up to date vs extraction marker
+    if is_bb_screener_up_to_date('us-bb-breakout', 'uslist'):
+        # Load and return cached data
+        cached_data, metadata, error = load_cached_screener('us-bb-breakout')
+        if cached_data is not None:
+            log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            bb_screener_progress['results'] = cached_data.to_dict('records')
+            bb_screener_progress['status'] = 'completed'
+            bb_screener_progress['progress'] = len(cached_data)
+            clean_records = []
+            for item in cached_data.to_dict('records'):
+                cleaned = {}
+                for k, v in item.items():
+                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = v
+                clean_records.append(cleaned)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Data dari cache",
+                "count": len(cached_data),
+                "data": clean_records,
+                "from_cache": True,
+                "cache_timestamp": metadata['timestamp']
+            })
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     
@@ -2489,20 +2524,14 @@ def screener_us_bb_breakout():
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
-        # Rate limit check -- baru cek pas mau beneran run
-        safe, left, msg = check_screener_cooldown('us-bb-breakout')
-        if not safe:
-            return jsonify({"status": "error", "message": msg}), 429
-        
-        # Set is_running flag & touch marker SEBELUM run biar cooldown aktif
         bb_screener_progress['is_running'] = True
-        touch_screener_marker('us-bb-breakout')
         
         run_bb_screener(uslist_path, 'US')
         
         if bb_screener_progress['results']:
             results_df = pd.DataFrame(bb_screener_progress['results'])
             save_screener_to_cache('us-bb-breakout', results_df)
+        touch_screener_marker('us-bb-breakout')
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
@@ -2556,33 +2585,43 @@ def screener_id_bb_breakout():
     bb_screener_progress['message'] = 'Initializing...'
     bb_screener_progress['is_running'] = False
     
-    cached_data, metadata, error = load_cached_screener('id-bb-breakout', 'idlist')
-    if cached_data is not None:
-        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
-                  detail=f'cached: {len(cached_data)} results')
-        # Update progress with cached result so SSE has fresh state
-        bb_screener_progress['results'] = cached_data.to_dict('records')
-        bb_screener_progress['status'] = 'completed'
-        bb_screener_progress['progress'] = len(cached_data)
-        # Bersihin NaN dari cached data sebelum jsonify
-        clean_records = []
-        for item in cached_data.to_dict('records'):
-            cleaned = {}
-            for k, v in item.items():
-                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
-                    cleaned[k] = None
-                else:
-                    cleaned[k] = v
-            clean_records.append(cleaned)
-        
+    # STEP 1: Check data sync marker (extraction marker)
+    if not check_extraction_marker_exists('idlist'):
+        log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
+                  detail='Data sync not run yet')
         return jsonify({
-            "status": "success",
-            "message": "Data dari cache",
-            "count": len(cached_data),
-            "data": clean_records,
-            "from_cache": True,
-            "cache_timestamp": metadata['timestamp']
-        })
+            "status": "error",
+            "message": "Please run data synchronization"
+        }), 400
+    
+    # STEP 2: Check if BB screener is up to date vs extraction marker
+    if is_bb_screener_up_to_date('id-bb-breakout', 'idlist'):
+        # Load and return cached data
+        cached_data, metadata, error = load_cached_screener('id-bb-breakout')
+        if cached_data is not None:
+            log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            bb_screener_progress['results'] = cached_data.to_dict('records')
+            bb_screener_progress['status'] = 'completed'
+            bb_screener_progress['progress'] = len(cached_data)
+            clean_records = []
+            for item in cached_data.to_dict('records'):
+                cleaned = {}
+                for k, v in item.items():
+                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = v
+                clean_records.append(cleaned)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Data dari cache",
+                "count": len(cached_data),
+                "data": clean_records,
+                "from_cache": True,
+                "cache_timestamp": metadata['timestamp']
+            })
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     
@@ -2592,20 +2631,14 @@ def screener_id_bb_breakout():
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
-        # Rate limit check -- baru cek pas mau beneran run
-        safe, left, msg = check_screener_cooldown('id-bb-breakout')
-        if not safe:
-            return jsonify({"status": "error", "message": msg}), 429
-        
-        # Set is_running flag & touch marker SEBELUM run biar cooldown aktif
         bb_screener_progress['is_running'] = True
-        touch_screener_marker('id-bb-breakout')
         
         run_bb_screener(idlist_path, 'ID')
         
         if bb_screener_progress['results']:
             results_df = pd.DataFrame(bb_screener_progress['results'])
             save_screener_to_cache('id-bb-breakout', results_df)
+        touch_screener_marker('id-bb-breakout')
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
