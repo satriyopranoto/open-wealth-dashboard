@@ -1229,6 +1229,7 @@ def analyze_stock():
         # ── Bokeh Interactive Chart ──
         chart_json = generate_chart(
             ticker, df_plot, sl_series,
+            upper_bb, middle_bb, lower_bb,
             adx_series, pdi_series, mdi_series,
         )
         

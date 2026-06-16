@@ -28,6 +28,9 @@ COLORS = {
     "down": "#f87171",
     "wick": "#99907c",
     "sl": "#fb923c",
+    "bb_upper": "#22d3ee",
+    "bb_lower": "#22d3ee",
+    "bb_middle": "#fde047",
     "adx": "#a78bfa",
     "pdi": "#4ade80",
     "mdi": "#f87171",
@@ -101,6 +104,31 @@ def _sl_line(p, df, sl_series):
     return p
 
 
+def _bb_overlay(p, df, upper_bb, middle_bb, lower_bb):
+    """Add Bollinger Bands as overlay lines on the price chart."""
+    bb_data = pd.DataFrame({
+        "idx": df["idx"].values,
+        "upper": upper_bb.values,
+        "middle": middle_bb.values,
+        "lower": lower_bb.values,
+    }).dropna()
+    if bb_data.empty:
+        return p
+    src = ColumnDataSource(bb_data)
+    upper_line = p.line("idx", "upper", source=src,
+                       color=COLORS["bb_upper"], line_width=1.5, line_dash="dashed",
+                       legend_label="Upper BB")
+    upper_line.level = "overlay"
+    middle_line = p.line("idx", "middle", source=src,
+                        color=COLORS["bb_middle"], line_width=1.5, line_dash="dotted",
+                        legend_label="Basis (SMA)")
+    middle_line.level = "overlay"
+    lower_line = p.line("idx", "lower", source=src,
+                       color=COLORS["bb_lower"], line_width=1.5, line_dash="dashed",
+                       legend_label="Lower BB")
+    lower_line.level = "overlay"
+    return p
+
 def _adx_figure(p, df, adx_series, pdi_series, mdi_series):
     adx_data = pd.DataFrame({
         "idx": df["idx"].values, "adx": adx_series.values,
@@ -161,7 +189,7 @@ def _main_hover(p, df):
     return p
 
 
-def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_series):
+def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, adx_series, pdi_series, mdi_series):
     """
     Generate a full interactive Bokeh chart layout.
 
@@ -186,6 +214,7 @@ def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_serie
 
     _candlestick_figure(p1, df)
     _sl_line(p1, df, sl_series)
+    _bb_overlay(p1, df, upper_bb, middle_bb, lower_bb)
     _setup_xaxis(p1, df, show_labels=False)
     _main_hover(p1, df)
     p1.add_tools(CrosshairTool(line_color="#666666", line_alpha=0.4))
