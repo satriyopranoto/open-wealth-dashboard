@@ -2492,7 +2492,7 @@ def screener_us_bb_breakout():
     # STEP 2: Check if BB screener is up to date vs extraction marker
     if is_bb_screener_up_to_date('us-bb-breakout', 'uslist'):
         # Load and return cached data
-        cached_data, metadata, error = load_cached_screener('us-bb-breakout')
+        cached_data, metadata, error = load_cached_screener('us-bb-breakout', extraction_list_name='uslist')
         if cached_data is not None:
             log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
@@ -2599,7 +2599,7 @@ def screener_id_bb_breakout():
     # STEP 2: Check if BB screener is up to date vs extraction marker
     if is_bb_screener_up_to_date('id-bb-breakout', 'idlist'):
         # Load and return cached data
-        cached_data, metadata, error = load_cached_screener('id-bb-breakout')
+        cached_data, metadata, error = load_cached_screener('id-bb-breakout', extraction_list_name='idlist')
         if cached_data is not None:
             log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
