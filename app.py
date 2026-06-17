@@ -2851,9 +2851,10 @@ def run_fundamental_screener(list_path, list_type):
                 print(f"Error analyzing fundamentals for {ticker}: {e}")
                 fundamental_screener_progress['message'] = f'{ticker}: Error'
                 continue
-            
-            # Gak perlu sleep karena pake cache (bukan API call)
-            time.sleep(0.05)  # minimal delay biar UI progress sempat update
+            # Delay antar ticker biar gak kena rate limit Yahoo Finance
+            # Random ~1.5-2.5 detik biar natural
+            sleep_time = 1.5 + (hash(ticker) % 10) / 10.0
+            time.sleep(sleep_time)
             
         fundamental_screener_progress['status'] = 'completed'
         fundamental_screener_progress['message'] = f'Fundamental Screener completed: {len(fundamental_screener_progress["results"])} stocks analyzed'
