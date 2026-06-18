@@ -7,7 +7,7 @@ Uses json_item for embedding in Flask JSON responses.
 import numpy as np
 import pandas as pd
 from bokeh.plotting import figure
-from bokeh.embed import json_item
+from bokeh.embed import components
 from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
@@ -284,6 +284,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=400,
         title=f"Analisis Saham {ticker}",
         x_range=Range1d(-0.5, len(df) - 0.5),
+        y_axis_location="right",
     )
     p1.yaxis.formatter = NumeralTickFormatter(format="$0,0.00")
     p1.yaxis.axis_label_text_color = COLORS["text"]
@@ -367,6 +368,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=160,
         x_range=p1.x_range,
         x_axis_location="below",
+        y_axis_location="right",
     )
     p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
     p2.yaxis.axis_label = "ADX"
@@ -409,4 +411,6 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         spacing=0,
     )
 
-    return json_item(layout, target="bokeh-chart")
+    script, div = components(layout)
+    script = script.replace("<script>", "").replace("</script>", "").strip()
+    return script, div
