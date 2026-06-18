@@ -172,6 +172,8 @@
 <div class="p-2 flex flex-col">
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-bb-breakout'); return false;">US BB Breakout</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-bb-breakout'); return false;">ID BB Breakout</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx'); return false;">US Basis ADX</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-basis-adx'); return false;">ID Basis ADX</a>
 </div>
 </div>
 </div>
@@ -542,6 +544,12 @@
             } else if (type === 'id-fundamental') {
                 endpoint = '/screener/id-fundamental';
                 titleText = 'ID Fundamental Screener';
+            } else if (type === 'us-basis-adx') {
+                endpoint = '/screener/us-basis-adx';
+                titleText = 'US Basis ADX Screener';
+            } else if (type === 'id-basis-adx') {
+                endpoint = '/screener/id-basis-adx';
+                titleText = 'ID Basis ADX Screener';
             }
 
             statusDiv.textContent = 'LOADING SCREENER DATA...';
@@ -550,7 +558,7 @@
             screenerResults.classList.add('hidden');
             document.getElementById('extraction-progress').classList.add('hidden');
 
-            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental';
+            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental' || type === 'us-basis-adx' || type === 'id-basis-adx';
 
             try {
                 let data = null;
@@ -575,6 +583,8 @@
                     let progressEndpoint = '/screener/bb-progress';
                     if (type === 'us-fundamental' || type === 'id-fundamental') {
                         progressEndpoint = '/screener/fundamental-progress';
+                    } else if (type === 'us-basis-adx' || type === 'id-basis-adx') {
+                        progressEndpoint = '/screener/basis-adx-progress';
                     }
                     const eventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
                     let screenerData = null;

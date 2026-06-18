@@ -256,7 +256,7 @@ def _format_xaxis_date(p, df):
     p.x_range = Range1d(-0.5, len(df) - 0.5)
 
 
-def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_series):
+def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, adx_series, pdi_series, mdi_series):
     """
     Generate a full interactive Bokeh chart layout.
 
@@ -268,6 +268,8 @@ def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_serie
         Must contain columns: Open, High, Low, Close (with DatetimeIndex).
     sl_series : pd.Series
         Stop Loss values (aligned with df_plot index).
+    upper_bb, middle_bb, lower_bb : pd.Series
+        Bollinger Bands values (aligned with df_plot index).
     adx_series, pdi_series, mdi_series : pd.Series
         ADX indicator values.
 
@@ -290,6 +292,29 @@ def generate_chart(ticker, df_plot, sl_series, adx_series, pdi_series, mdi_serie
 
     _candlestick_figure(p1, df, sl_series)
     _format_xaxis_date(p1, df)
+
+    # ── Bollinger Bands lines ─────────────────────────────────
+    bb_source = ColumnDataSource(data=dict(
+        idx=df["idx"].values,
+        upper=upper_bb.values if hasattr(upper_bb, "values") else upper_bb,
+        middle=middle_bb.values if hasattr(middle_bb, "values") else middle_bb,
+        lower=lower_bb.values if hasattr(lower_bb, "values") else lower_bb,
+    ))
+
+    # Only plot BB bands if data is valid (not all NaN)
+    if not np.all(np.isnan(bb_source.data["upper"])):
+        # Upper band
+        p1.line("idx", "upper", source=bb_source,
+                line_color="#9b59b6", line_width=1.0, line_alpha=0.6,
+                legend_label="Upper BB")
+        # Middle band
+        p1.line("idx", "middle", source=bb_source,
+                line_color="#e67e22", line_width=1.2, line_alpha=0.7,
+                legend_label="Middle BB")
+        # Lower band
+        p1.line("idx", "lower", source=bb_source,
+                line_color="#9b59b6", line_width=1.0, line_alpha=0.6,
+                legend_label="Lower BB")
 
     # Crosshair on main chart
     p1.add_tools(CrosshairTool(line_color="#666666", line_alpha=0.4))
