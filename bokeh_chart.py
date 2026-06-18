@@ -408,4 +408,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         spacing=0,
     )
 
-    return components(layout)
+    script, div = components(layout)
+    # Strip outer <script> tags — frontend creates its own <script> element
+    script = script.replace("<script>", "").replace("</script>", "").strip()
+    return script, div
