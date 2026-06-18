@@ -61,6 +61,17 @@ bb_screener_progress = {
     'message': ''
 }
 
+# Basis ADX Screener progress tracking
+basis_adx_screener_progress = {
+    'is_running': False,
+    'current_ticker': '',
+    'progress': 0,
+    'total': 0,
+    'results': [],
+    'status': 'idle',
+    'message': ''
+}
+
 # Fundamental Screener progress tracking
 fundamental_screener_progress = {
     'is_running': False,
@@ -2390,15 +2401,19 @@ def run_bb_screener(list_path, list_type):
                 last_pdi = float(pdi_series.iloc[-1])
                 last_mdi = float(mdi_series.iloc[-1])
                 pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+                adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+                # ADX Valley: ADX pernah <25 dlm 30 bar terakhir
+                adx_window = adx_series.iloc[-30:]
+                adx_valley = not np.isnan(np.nanmin(adx_window)) and np.nanmin(adx_window) < 25
 
                 pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
                 adx_strong = last_adx > 25
 
                 if last_price > last_sl and last_price > last_upper_bb:
-                    # BUY: harga breakout BB + konfirmasi ADX
+                    # BUY: harga breakout BB + konfirmasi ADX + ADX Valley
                     if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
-                            and pdi_above_mdi and adx_strong and pdi_rising):
+                            and pdi_above_mdi and adx_strong and pdi_rising and adx_valley):
                         recommendation = "BUY"
                     else:
                         # Breakout tanpa konfirmasi ADX = HOLD
@@ -2727,6 +2742,147 @@ def screener_bb_progress():
     from flask import Response
     return Response(generate(), mimetype='text/event-stream')
 
+def run_basis_adx_screener(list_path, list_type):
+    """
+    Helper function untuk menjalankan Basis ADX screener pada watchlist
+    Logic: Low > Donchian SL, Close > Basis (SMA), ADX > 25, PDI > MDI, PDI rising
+    """
+    log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type})
+    screener_start = time.time()
+    global basis_adx_screener_progress
+    
+    try:
+        tickers_df = pd.read_csv(list_path)
+        if 'Symbol' not in tickers_df.columns:
+            basis_adx_screener_progress['status'] = 'error'
+            basis_adx_screener_progress['message'] = "Kolom 'Symbol' tidak ditemukan"
+            return
+        
+        tickers = tickers_df['Symbol'].tolist()
+        
+        basis_adx_screener_progress['is_running'] = True
+        basis_adx_screener_progress['total'] = len(tickers)
+        basis_adx_screener_progress['progress'] = 0
+        basis_adx_screener_progress['results'] = []
+        basis_adx_screener_progress['status'] = 'running'
+        basis_adx_screener_progress['message'] = f'Starting Basis ADX Screener for {list_type} ({len(tickers)} tickers)...'
+        
+        for i, ticker in enumerate(tickers):
+            ticker = ticker.strip().upper()
+            basis_adx_screener_progress['current_ticker'] = ticker
+            basis_adx_screener_progress['progress'] = i + 1
+            basis_adx_screener_progress['message'] = f'Analyzing {ticker}...'
+            
+            try:
+                data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
+                
+                if error_msg or data is None or (hasattr(data, 'empty') and data.empty):
+                    basis_adx_screener_progress['message'] = f'{ticker}: No data'
+                    continue
+                
+                if isinstance(data.columns, pd.MultiIndex):
+                    data.columns = data.columns.get_level_values(0)
+                
+                numeric_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+                for col in numeric_cols:
+                    if col in data.columns:
+                        data[col] = pd.to_numeric(data[col], errors='coerce')
+                
+                before = len(data)
+                data = data.dropna(subset=['Close'])
+                dropped = before - len(data)
+                if dropped > 0:
+                    print(f"Basis ADX Screener - {ticker}: dropped {dropped} incomplete row(s)")
+                
+                if len(data) < 220:
+                    basis_adx_screener_progress['message'] = f'{ticker}: Insufficient data'
+                    continue
+                
+                sl_series = calculate_sl(data)
+                upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+                adx_series, pdi_series, mdi_series = calculate_adx(data)
+                
+                last_price = float(data['Close'].iloc[-1])
+                last_low = float(data['Low'].iloc[-1])
+                last_sl = float(sl_series.iloc[-1])
+                last_basis = float(middle_bb.iloc[-1])
+                last_volume = float(data['Volume'].iloc[-1]) if 'Volume' in data.columns else 0
+                
+                if np.isnan(last_sl) or np.isnan(last_basis):
+                    basis_adx_screener_progress['message'] = f'{ticker}: Invalid SL or Basis data'
+                    continue
+                
+                yesterday_close = float(data['Close'].iloc[-2]) if len(data) >= 2 else last_price
+                change_pct = ((last_price - yesterday_close) / yesterday_close * 100) if yesterday_close != 0 else 0
+                
+                value_in_millions = (last_price * last_volume) / 1_000_000
+                
+                last_date = data.index[-1].strftime('%Y-%m-%d')
+                
+                last_adx = float(adx_series.iloc[-1])
+                last_pdi = float(pdi_series.iloc[-1])
+                last_mdi = float(mdi_series.iloc[-1])
+                pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+                # SMA 200: long-term trend filter
+                # SMA 200 (long-term trend filter)
+                last_sma200 = float(data['Close'].rolling(200).mean().iloc[-1])
+                uptrend = last_basis > last_sma200 if not np.isnan(last_sma200) else False
+                
+                pdi_rising = last_pdi > pdi_5ago
+                pdi_above_mdi = last_pdi > last_mdi
+                adx_strong = last_adx > 25
+                is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
+                
+                if last_low > last_sl and last_price > last_basis:
+                    if (not is_nan
+                            and pdi_above_mdi and adx_strong and pdi_rising and uptrend):
+                        recommendation = "BUY"
+                    else:
+                        recommendation = "HOLD LONG"
+                elif last_price > last_sl:
+                    recommendation = "HOLD LONG"
+                else:
+                    recommendation = "SHORT SELL"
+                
+                result_item = {
+                    'ticker': ticker,
+                    'last_date': last_date,
+                    'price': round(last_price, 2),
+                    'basis': round(last_basis, 2),
+                    'change_pct': round(change_pct, 2),
+                    'volume': float(last_volume),
+                    'value': round(value_in_millions, 2),
+                    'recommendation': recommendation,
+                    'adx': round(float(adx_series.iloc[-1]), 2) if not np.isnan(float(adx_series.iloc[-1])) else None,
+                    'pdi': round(float(pdi_series.iloc[-1]), 2) if not np.isnan(float(pdi_series.iloc[-1])) else None,
+                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None
+                }
+                
+                basis_adx_screener_progress['results'].append(result_item)
+                basis_adx_screener_progress['message'] = f'{ticker}: {recommendation}'
+                
+            except Exception as e:
+                print(f"Error analyzing {ticker}: {e}")
+                basis_adx_screener_progress['message'] = f'{ticker}: Error'
+                continue
+            
+            time.sleep(0.5)
+        
+        basis_adx_screener_progress['status'] = 'completed'
+        basis_adx_screener_progress['results'] = sorted(basis_adx_screener_progress['results'], key=lambda x: x.get('value', 0), reverse=True)
+        basis_adx_screener_progress['message'] = f'Basis ADX Screener completed: {len(basis_adx_screener_progress["results"])} stocks analyzed'
+        basis_adx_screener_progress['is_running'] = False
+        log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='success',
+                  detail=f'{len(basis_adx_screener_progress["results"])} stocks analyzed')
+        
+    except Exception as e:
+        basis_adx_screener_progress['status'] = 'error'
+        basis_adx_screener_progress['message'] = str(e)
+        basis_adx_screener_progress['is_running'] = False
+        log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='error',
+                  detail=str(e))
+
+
 def run_fundamental_screener(list_path, list_type):
     """
     Helper function untuk menjalankan fundamental screener pada watchlist
@@ -2868,6 +3024,210 @@ def run_fundamental_screener(list_path, list_type):
         fundamental_screener_progress['is_running'] = False
         log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type}, status='error',
                   detail=str(e))
+
+
+@app.route('/screener/us-basis-adx', methods=['GET', 'POST', 'OPTIONS'])
+def screener_us_basis_adx():
+    """Endpoint untuk mendapatkan data screener US Basis ADX"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'})
+    start_time = time.time()
+    
+    global basis_adx_screener_progress
+    
+    if basis_adx_screener_progress['is_running']:
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Basis ADX Screener sedang berjalan"}), 409
+    
+    basis_adx_screener_progress['status'] = 'starting'
+    basis_adx_screener_progress['current_ticker'] = ''
+    basis_adx_screener_progress['progress'] = 0
+    basis_adx_screener_progress['total'] = 0
+    basis_adx_screener_progress['results'] = []
+    basis_adx_screener_progress['message'] = 'Initializing...'
+    basis_adx_screener_progress['is_running'] = False
+    
+    if not check_extraction_marker_exists('uslist'):
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
+                  detail='Data sync not run yet')
+        return jsonify({"status": "error", "message": "Please run data synchronization"}), 400
+    
+    if is_bb_screener_up_to_date('us-basis-adx', 'uslist'):
+        cached_data, metadata, error = load_cached_screener('us-basis-adx', extraction_list_name='uslist')
+        if cached_data is not None:
+            log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            basis_adx_screener_progress['results'] = cached_data.to_dict('records')
+            basis_adx_screener_progress['status'] = 'completed'
+            basis_adx_screener_progress['progress'] = len(cached_data)
+            clean_records = []
+            for item in cached_data.to_dict('records'):
+                cleaned = {}
+                for k, v in item.items():
+                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = v
+                clean_records.append(cleaned)
+            return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    
+    uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
+    if not os.path.exists(uslist_path):
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
+                  detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
+    
+    try:
+        basis_adx_screener_progress['is_running'] = True
+        run_basis_adx_screener(uslist_path, 'US')
+        if basis_adx_screener_progress['results']:
+            results_df = pd.DataFrame(basis_adx_screener_progress['results'])
+            save_screener_to_cache('us-basis-adx', results_df)
+        touch_screener_marker('us-basis-adx')
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
+                  detail=f'{len(basis_adx_screener_progress["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": basis_adx_screener_progress['message'],
+            "count": len(basis_adx_screener_progress['results']), "data": basis_adx_screener_progress['results']})
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error', detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/screener/id-basis-adx', methods=['GET', 'POST', 'OPTIONS'])
+def screener_id_basis_adx():
+    """Endpoint untuk mendapatkan data screener ID Basis ADX"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'})
+    start_time = time.time()
+    
+    global basis_adx_screener_progress
+    
+    if basis_adx_screener_progress['is_running']:
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Basis ADX Screener sedang berjalan"}), 409
+    
+    basis_adx_screener_progress['status'] = 'starting'
+    basis_adx_screener_progress['current_ticker'] = ''
+    basis_adx_screener_progress['progress'] = 0
+    basis_adx_screener_progress['total'] = 0
+    basis_adx_screener_progress['results'] = []
+    basis_adx_screener_progress['message'] = 'Initializing...'
+    basis_adx_screener_progress['is_running'] = False
+    
+    if not check_extraction_marker_exists('idlist'):
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
+                  detail='Data sync not run yet')
+        return jsonify({"status": "error", "message": "Please run data synchronization"}), 400
+    
+    if is_bb_screener_up_to_date('id-basis-adx', 'idlist'):
+        cached_data, metadata, error = load_cached_screener('id-basis-adx', extraction_list_name='idlist')
+        if cached_data is not None:
+            log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
+                      detail=f'cached: {len(cached_data)} results')
+            basis_adx_screener_progress['results'] = cached_data.to_dict('records')
+            basis_adx_screener_progress['status'] = 'completed'
+            basis_adx_screener_progress['progress'] = len(cached_data)
+            clean_records = []
+            for item in cached_data.to_dict('records'):
+                cleaned = {}
+                for k, v in item.items():
+                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = v
+                clean_records.append(cleaned)
+            return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    
+    idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
+    if not os.path.exists(idlist_path):
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
+                  detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
+    
+    try:
+        basis_adx_screener_progress['is_running'] = True
+        run_basis_adx_screener(idlist_path, 'ID')
+        if basis_adx_screener_progress['results']:
+            results_df = pd.DataFrame(basis_adx_screener_progress['results'])
+            save_screener_to_cache('id-basis-adx', results_df)
+        touch_screener_marker('id-basis-adx')
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
+                  detail=f'{len(basis_adx_screener_progress["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": basis_adx_screener_progress['message'],
+            "count": len(basis_adx_screener_progress['results']), "data": basis_adx_screener_progress['results']})
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error', detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/screener/basis-adx-progress', methods=['GET', 'OPTIONS'])
+def screener_basis_adx_progress():
+    """SSE endpoint untuk real-time progress Basis ADX screener"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        return response
+    
+    def generate():
+        last_progress = None
+        idle_loops = 0
+        max_idle_loops = 30
+        while True:
+            global basis_adx_screener_progress
+            current_progress = {
+                'status': basis_adx_screener_progress['status'],
+                'current_ticker': basis_adx_screener_progress['current_ticker'],
+                'progress': basis_adx_screener_progress['progress'],
+                'total': basis_adx_screener_progress['total'],
+                'results_count': len(basis_adx_screener_progress['results']),
+                'message': basis_adx_screener_progress['message']
+            }
+            if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
+                if current_progress != last_progress:
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                break
+            if current_progress['status'] == 'starting' and current_progress['results_count'] == 0:
+                if current_progress != last_progress:
+                    last_progress = current_progress.copy()
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                time.sleep(1)
+                continue
+            if current_progress['status'] == 'idle':
+                idle_loops += 1
+                if idle_loops >= max_idle_loops:
+                    break
+                last_progress = current_progress.copy()
+                time.sleep(1)
+                continue
+            if current_progress != last_progress:
+                last_progress = current_progress.copy()
+                yield "data: " + json.dumps(current_progress) + "\n\n"
+            if current_progress['status'] in ['completed', 'error']:
+                break
+            time.sleep(1)
+    
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @app.route('/screener/us-fundamental', methods=['GET', 'POST', 'OPTIONS'])
