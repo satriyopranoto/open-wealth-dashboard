@@ -7,7 +7,7 @@ Uses json_item for embedding in Flask JSON responses.
 import numpy as np
 import pandas as pd
 from bokeh.plotting import figure
-from bokeh.embed import json_item
+from bokeh.embed import components
 from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
@@ -235,10 +235,6 @@ def _format_xaxis_date(p, df):
     if tick_indices[-1] != len(df) - 1:
         tick_indices.append(len(df) - 1)
 
-    tick_labels = {i: str(df.index[tick_indices.index(i) * step].strftime("%Y-%m-%d"))
-                   if isinstance(df.index, pd.DatetimeIndex) else str(df.index[i])
-                   for i in tick_indices}
-
     # Better: use FixedTicker
     from bokeh.models import FixedTicker
 
@@ -289,7 +285,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         x_range=Range1d(-0.5, len(df) - 0.5),
     )
     p1.yaxis.formatter = NumeralTickFormatter(format="$0,0.00")
-    p1.yaxis.label_text_color = COLORS["text"]
+    p1.yaxis.axis_label_text_color = COLORS["text"]
 
     _candlestick_figure(p1, df, sl_series)
     _format_xaxis_date(p1, df)
@@ -412,4 +408,4 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         spacing=0,
     )
 
-    return json_item(layout, target="bokeh-chart")
+    return components(layout)

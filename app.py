@@ -1238,7 +1238,7 @@ def analyze_stock():
         # ADX sudah dihitung di atas untuk rekomendasi
         
         # ── Bokeh Interactive Chart ──
-        chart_json = generate_chart(
+        chart_script, chart_div = generate_chart(
             ticker, df_plot, sl_series,
             upper_bb, middle_bb, lower_bb,
             adx_series, pdi_series, mdi_series,
@@ -1270,8 +1270,8 @@ def analyze_stock():
             "recommendation": recommendation,
             "last_price": float(last_price),
             "date": str(current_date),
-            "chart_div": chart_json["div"],
-            "chart_script": chart_json["script"],
+            "chart_div": chart_div,
+            "chart_script": chart_script,
             "last_sl": float(last_sl), # Tambahkan ini
             "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
             "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,
