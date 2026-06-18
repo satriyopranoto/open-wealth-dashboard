@@ -851,7 +851,7 @@ def save_data_to_cache(ticker, data):
         traceback.print_exc()
         return False
 
-def download_stock_data(ticker, period="200d", force_refresh=False):
+def download_stock_data(ticker, period="400d", force_refresh=False):
     """
     Fungsi helper untuk download data dengan retry logic sederhana
     force_refresh: jika True, akan download ulang meskipun ada cache
@@ -1042,7 +1042,7 @@ def refresh_data():
     try:
         print(f"Refreshing data untuk ticker: {ticker}")
 
-        data, metadata, error_msg = download_stock_data(ticker, force_refresh=True)
+        data, metadata, error_msg = download_stock_data(ticker, period="400d", force_refresh=True)
 
         if error_msg:
             duration = (time.time() - start_time) * 1000
@@ -1098,7 +1098,7 @@ def analyze_stock():
     print(f"Memproses analisis untuk ticker: {ticker} (force_refresh={force_refresh})")
 
     # 1. Download Data
-    data, metadata, error_msg = download_stock_data(ticker, force_refresh=force_refresh)
+    data, metadata, error_msg = download_stock_data(ticker, period="400d", force_refresh=force_refresh)
     # TAMBAHKAN INI: Perbaikan MultiIndex yfinance
     if data is not None and isinstance(data.columns, pd.MultiIndex):
         data.columns = data.columns.get_level_values(0)
@@ -1238,7 +1238,7 @@ def analyze_stock():
         # ADX sudah dihitung di atas untuk rekomendasi
         
         # ── Bokeh Interactive Chart ──
-        chart_json = generate_chart(
+        chart_script, chart_div = generate_chart(
             ticker, df_plot, sl_series,
             upper_bb, middle_bb, lower_bb,
             adx_series, pdi_series, mdi_series,
@@ -1270,7 +1270,8 @@ def analyze_stock():
             "recommendation": recommendation,
             "last_price": float(last_price),
             "date": str(current_date),
-            "chart_json": chart_json,
+            "chart_div": chart_div,
+            "chart_script": chart_script,
             "last_sl": float(last_sl), # Tambahkan ini
             "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
             "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,
@@ -2076,7 +2077,7 @@ def extract_us_stocks():
                     print(f"[EXTRACTION US] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
                 
                 try:
-                    data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
+                    data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
                     if error_msg:
                         extraction_progress['failed_count'] += 1
                     else:
@@ -2191,7 +2192,7 @@ def extract_id_stocks():
                     print(f"[EXTRACTION ID] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
                 
                 try:
-                    data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
+                    data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
                     if error_msg:
                         extraction_progress['failed_count'] += 1
                     else:
@@ -2344,7 +2345,7 @@ def run_bb_screener(list_path, list_type):
             bb_screener_progress['message'] = f'Analyzing {ticker}...'
             
             try:
-                data, _, error_msg = download_stock_data(ticker, period="200d", force_refresh=False)
+                data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
                 
                 print(f"BB Screener - {ticker}: data={type(data)}, error={error_msg}, empty={data.empty if data is not None else True}")
                 
