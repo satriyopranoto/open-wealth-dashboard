@@ -1194,7 +1194,7 @@ def analyze_stock():
         pdi_rising = last_pdi > pdi_5ago
         pdi_above_mdi = last_pdi > last_mdi
         mdi_above_pdi = last_mdi > last_pdi
-        adx_strong = last_adx > 25
+        adx_strong = last_adx > 20
 
         # --- Logika Rekomendasi (samakan dengan BB Screener) ---
         if last_price > last_sl and last_price > last_upper_bb:
@@ -2408,7 +2408,7 @@ def run_bb_screener(list_path, list_type):
 
                 pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
-                adx_strong = last_adx > 25
+                adx_strong = last_adx > 20
 
                 if last_price > last_sl and last_price > last_upper_bb:
                     # BUY: harga breakout BB + konfirmasi ADX + ADX Valley
@@ -2830,7 +2830,7 @@ def run_basis_adx_screener(list_path, list_type):
                 
                 pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
-                adx_strong = last_adx > 25
+                adx_strong = last_adx > 20
                 is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
                 
                 if last_low > last_sl and last_price > last_basis:
