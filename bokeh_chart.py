@@ -62,8 +62,9 @@ def _make_base_figure(**kwargs):
     p.xgrid.grid_line_alpha = 0.5
     p.ygrid.grid_line_alpha = 0.5
     # Axis styling
-    p.axis.text_color = COLORS["text"]
-    p.axis.text_font_size = "10px"
+    p.axis.axis_label_text_color = COLORS["text"]
+    p.axis.axis_label_text_font_size = "10px"
+    p.axis.major_label_text_font_size = "10px"
     p.axis.major_label_text_color = COLORS["text"]
     p.axis.axis_line_color = COLORS["border"]
     p.axis.major_tick_line_color = COLORS["border"]
