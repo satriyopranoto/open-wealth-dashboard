@@ -7,7 +7,7 @@ Uses json_item for embedding in Flask JSON responses.
 import numpy as np
 import pandas as pd
 from bokeh.plotting import figure
-from bokeh.embed import components
+from bokeh.embed import json_item
 from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
@@ -53,6 +53,7 @@ def _make_base_figure(**kwargs):
         toolbar_sticky=False,
         tools="pan,box_zoom,wheel_zoom,reset,save",
         active_scroll="wheel_zoom",
+        sizing_mode="stretch_width",
     )
     defaults.update(kwargs)
     p = figure(**defaults)
@@ -408,7 +409,4 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         spacing=0,
     )
 
-    script, div = components(layout)
-    # Strip outer <script> tags — frontend creates its own <script> element
-    script = script.replace("<script>", "").replace("</script>", "").strip()
-    return script, div
+    return json_item(layout, target="bokeh-chart")

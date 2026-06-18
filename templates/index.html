@@ -1051,16 +1051,17 @@
         function renderChart(data) {
             const container = document.getElementById('bokeh-chart');
             container.innerHTML = '<div class="text-center text-[#99907c] py-8">Loading chart...</div>';
-            if (!data || !data.chart_div) {
+            if (!data || !data.chart_json) {
                 container.innerHTML = '<p class="text-red-400 text-sm">No chart data received.</p>';
                 return;
             }
-            // Set the div (container for Bokeh)
-            container.innerHTML = data.chart_div;
-            // Create script element and inject it (creates proper execution context)
-            const scriptEl = document.createElement('script');
-            scriptEl.textContent = data.chart_script;
-            container.appendChild(scriptEl);
+            // Clear container and use Bokeh embed_item
+            container.innerHTML = '';
+            if (typeof Bokeh !== 'undefined') {
+                Bokeh.embed.embed_item(data.chart_json, 'bokeh-chart');
+            } else {
+                container.innerHTML = '<p class="text-red-400 text-sm">BokehJS library not loaded.</p>';
+            }
         }
 
         function setFairPriceValue(elementId, fairPrice, currentPrice) {
