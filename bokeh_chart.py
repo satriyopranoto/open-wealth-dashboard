@@ -403,6 +403,16 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         p.legend.border_line_alpha = 0.5
         p.legend.click_policy = "hide"
 
+    # ── Limit default view to last 200 bars ───────────────────
+    # Data di-fetch 400d untuk akurasi SMA200, tapi menampilkan
+    # 400 bar sekaligus bikin SMA200 muncul di tengah chart.
+    # Default view cukup 200 bar terakhir, user bisa pan ke kiri
+    # untuk lihat data lama kapan saja.
+    display_bars = min(200, len(df))
+    x_start = len(df) - display_bars
+    p1.x_range = Range1d(x_start - 0.5, len(df) - 0.5)
+    p2.x_range = Range1d(x_start - 0.5, len(df) - 0.5)
+
     # ── Layout ────────────────────────────────────────────────
     layout = column(
         p1,
