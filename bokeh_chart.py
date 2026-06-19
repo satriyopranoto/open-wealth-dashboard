@@ -411,7 +411,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
     display_bars = min(200, len(df))
     x_start = len(df) - display_bars
     p1.x_range = Range1d(x_start - 0.5, len(df) - 0.5)
-    p2.x_range = Range1d(x_start - 0.5, len(df) - 0.5)
+    p2.x_range = p1.x_range  # share same object so pan/zoom stays synced
 
     # ── Layout ────────────────────────────────────────────────
     layout = column(
