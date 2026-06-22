@@ -2423,6 +2423,9 @@ def run_bb_screener(list_path, list_type):
                 else:
                     recommendation = "SHORT SELL"
                 
+                # Calculate ADX+SMA% for trend strength
+                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                
                 result_item = {
                     'ticker': ticker,
                     'last_date': last_date,
@@ -2433,7 +2436,9 @@ def run_bb_screener(list_path, list_type):
                     'recommendation': recommendation,
                     'adx': round(float(adx_series.iloc[-1]), 2) if not np.isnan(float(adx_series.iloc[-1])) else None,
                     'pdi': round(float(pdi_series.iloc[-1]), 2) if not np.isnan(float(pdi_series.iloc[-1])) else None,
-                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None
+                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None,
+                    'adx_sma_pct': adx_sma_pct,
+                    'trend_commentary': trend_commentary
                 }
                 
                 bb_screener_progress['results'].append(result_item)
@@ -2823,10 +2828,6 @@ def run_basis_adx_screener(list_path, list_type):
                 last_pdi = float(pdi_series.iloc[-1])
                 last_mdi = float(mdi_series.iloc[-1])
                 pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
-                # SMA 200: long-term trend filter
-                # SMA 200 (long-term trend filter)
-                last_sma200 = float(data['Close'].rolling(200).mean().iloc[-1])
-                uptrend = last_basis > last_sma200 if not np.isnan(last_sma200) else False
                 
                 pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
@@ -2835,7 +2836,7 @@ def run_basis_adx_screener(list_path, list_type):
                 
                 if last_low > last_sl and last_price > last_basis:
                     if (not is_nan
-                            and pdi_above_mdi and adx_strong and pdi_rising and uptrend):
+                            and pdi_above_mdi and adx_strong and pdi_rising):
                         recommendation = "BUY"
                     else:
                         recommendation = "HOLD LONG"
@@ -2843,6 +2844,9 @@ def run_basis_adx_screener(list_path, list_type):
                     recommendation = "HOLD LONG"
                 else:
                     recommendation = "SHORT SELL"
+                
+                # Calculate ADX+SMA% for trend strength
+                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
                 
                 result_item = {
                     'ticker': ticker,
@@ -2855,7 +2859,9 @@ def run_basis_adx_screener(list_path, list_type):
                     'recommendation': recommendation,
                     'adx': round(float(adx_series.iloc[-1]), 2) if not np.isnan(float(adx_series.iloc[-1])) else None,
                     'pdi': round(float(pdi_series.iloc[-1]), 2) if not np.isnan(float(pdi_series.iloc[-1])) else None,
-                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None
+                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None,
+                    'adx_sma_pct': adx_sma_pct,
+                    'trend_commentary': trend_commentary
                 }
                 
                 basis_adx_screener_progress['results'].append(result_item)
@@ -3460,3 +3466,34 @@ if __name__ == '__main__':
     # Debug=True penting untuk melihat log di terminal
     # threaded=True memastikan request datang bersamaan tidak menumpuk
     app.run(debug=True, threaded=True, use_reloader=False)
+def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb):
+    """
+    Hitung persentase bar di mana ADX > 20 AND Close > SMA20 (Basis).
+    Memberikan indikasi directional trend strength.
+
+    Returns:
+        (adx_sma_pct, trend_commentary)
+    """
+    valid_count = 0
+    adx_sma_count = 0
+
+    for i in range(20, len(data)):  # mulai setelah SMA20 terisi
+        if np.isnan(adx_series.iloc[i]):
+            continue
+        valid_count += 1
+        close = float(data['Close'].iloc[i])
+        sma20 = float(middle_bb.iloc[i])
+        adx = float(adx_series.iloc[i])
+        if adx > 20 and close > sma20:
+            adx_sma_count += 1
+
+    pct = (adx_sma_count / valid_count * 100) if valid_count > 0 else 0.0
+
+    if pct >= 35:
+        commentary = f"Uptrend Kuat ({pct:.0f}%)"
+    elif pct >= 30:
+        commentary = f"Medium Uptrend ({pct:.0f}%)"
+    else:
+        commentary = f"Sideways ({pct:.0f}%)"
+
+    return round(pct, 1), commentary

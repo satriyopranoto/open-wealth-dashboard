@@ -136,6 +136,7 @@
             filter: contrast(1.1) brightness(0.9);
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
+        #bokeh-chart > div { width: 100% !important; }
     </style>
 </head>
 <body>
@@ -220,6 +221,7 @@
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Price</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">% Change</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Value (M)</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Trend</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Recommendation</th>
                 </tr>
             </thead>
@@ -747,12 +749,16 @@
                         if (hasRecommendation) {
                             const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
                                            stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
+                            // Trend class
+                            const trendClass = stock.trend_commentary?.includes('Uptrend Kuat') ? 'text-[#4ade80]' : 
+                                              stock.trend_commentary?.includes('Medium') ? 'text-[#fbbf24]' : 'text-[#f87171]';
                             rowHtml = `
                                 <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
                                 <td class="py-3 text-xs text-[#99907c]">${stock.last_date || '-'}</td>
                                 <td class="py-3 text-right">${stock.price ? stock.price.toFixed(2) : '-'}</td>
                                 <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
                                 <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                                <td class="py-3 text-right font-bold ${trendClass}">${stock.trend_commentary || '-'}</td>
                                 <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
                             `;
                         } else {
@@ -1051,17 +1057,14 @@
         function renderChart(data) {
             const container = document.getElementById('bokeh-chart');
             container.innerHTML = '<div class="text-center text-[#99907c] py-8">Loading chart...</div>';
-            if (!data || !data.chart_json) {
+            if (!data || !data.chart_div) {
                 container.innerHTML = '<p class="text-red-400 text-sm">No chart data received.</p>';
                 return;
             }
-            // Clear container and use Bokeh embed_item
-            container.innerHTML = '';
-            if (typeof Bokeh !== 'undefined') {
-                Bokeh.embed.embed_item(data.chart_json, 'bokeh-chart');
-            } else {
-                container.innerHTML = '<p class="text-red-400 text-sm">BokehJS library not loaded.</p>';
-            }
+            container.innerHTML = data.chart_div;
+            const scriptEl = document.createElement('script');
+            scriptEl.textContent = data.chart_script;
+            container.appendChild(scriptEl);
         }
 
         function setFairPriceValue(elementId, fairPrice, currentPrice) {
@@ -1264,6 +1267,7 @@
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">ADX</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">+DI</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">-DI</th>
+                    <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Trend</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Value (M)</th>
                     <th class="text-right py-3 text-[#99907c] uppercase text-xs tracking-wider">Rec</th>
                 `;
@@ -1324,6 +1328,7 @@
                     const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
                                    stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
                     const adxClass = stock.adx && stock.adx > 25 ? 'text-[#4ade80]' : stock.adx && stock.adx > 20 ? 'text-[#fbbf24]' : 'text-[#99907c]';
+                    const trendClass = stock.trend_commentary?.includes("Uptrend Kuat") ? "text-[#4ade80]" : stock.trend_commentary?.includes("Medium") ? "text-[#fbbf24]" : "text-[#f87171]";
                     rowHtml = `
                         <td class="py-3 font-bold text-[#d4af37]">${stock.ticker}</td>
                         <td class="py-3 text-xs text-[#99907c]">${stock.last_date || '-'}</td>
@@ -1332,6 +1337,7 @@
                         <td class="py-3 text-right font-bold ${adxClass}">${stock.adx != null ? stock.adx.toFixed(1) : '-'}</td>
                         <td class="py-3 text-right text-[#4ade80]">${stock.pdi != null ? stock.pdi.toFixed(1) : '-'}</td>
                         <td class="py-3 text-right text-[#f87171]">${stock.mdi != null ? stock.mdi.toFixed(1) : '-'}</td>
+                        <td class="py-3 text-right font-bold ${trendClass}">${stock.trend_commentary || "-"}</td>
                         <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                         <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
                     `;
@@ -1352,4 +1358,4 @@
             screenerResults.classList.remove('hidden');
         }
     </script>
-</body></html>
+</body></html><!-- TREND_MARKER_MY_EDIT_2026 -->
