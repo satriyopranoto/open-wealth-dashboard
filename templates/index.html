@@ -748,8 +748,8 @@
                         let rowHtml = '';
                         if (hasRecommendation) {
                             const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
-                            const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                                            stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
+                            const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                             // Trend class
                             const trendClass = stock.trend_commentary?.includes('Uptrend Kuat') ? 'text-[#4ade80]' : 
                                               stock.trend_commentary?.includes('Medium') ? 'text-[#fbbf24]' : 'text-[#f87171]';
@@ -1327,8 +1327,8 @@
                     `;
                 } else if (hasRecommendation) {
                     const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
-                    const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                                    stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
+                    const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                     const adxClass = stock.adx && stock.adx > 25 ? 'text-[#4ade80]' : stock.adx && stock.adx > 20 ? 'text-[#fbbf24]' : 'text-[#99907c]';
                     const trendClass = stock.trend_commentary?.includes("Uptrend Kuat") ? "text-[#4ade80]" : stock.trend_commentary?.includes("Medium") ? "text-[#fbbf24]" : "text-[#f87171]";
                     rowHtml = `
