@@ -748,6 +748,7 @@
                         let rowHtml = '';
                         if (hasRecommendation) {
                             const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
+                            const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                                            stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
                             // Trend class
                             const trendClass = stock.trend_commentary?.includes('Uptrend Kuat') ? 'text-[#4ade80]' : 
@@ -759,7 +760,7 @@
                                 <td class="py-3 text-right font-bold ${changeClass}">${changeSign}${stock.change_pct?.toFixed(2) || '-'}%</td>
                                 <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
                                 <td class="py-3 text-right font-bold ${trendClass}">${stock.trend_commentary || '-'}</td>
-                                <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
+                                <td class="py-3 text-right font-bold ${recClass}">${recIcon} ${stock.recommendation || '-'}</td>
                             `;
                         } else {
                             rowHtml = `
@@ -1326,6 +1327,7 @@
                     `;
                 } else if (hasRecommendation) {
                     const recClass = stock.recommendation === 'BUY' ? 'text-[#4ade80]' : 
+                    const recIcon = stock.recommendation === 'BUY' ? '🟢' : stock.recommendation === 'HOLD LONG' ? '🟡' : '🔴';
                                    stock.recommendation === 'HOLD LONG' ? 'text-[#fbbf24]' : 'text-[#f87171]';
                     const adxClass = stock.adx && stock.adx > 25 ? 'text-[#4ade80]' : stock.adx && stock.adx > 20 ? 'text-[#fbbf24]' : 'text-[#99907c]';
                     const trendClass = stock.trend_commentary?.includes("Uptrend Kuat") ? "text-[#4ade80]" : stock.trend_commentary?.includes("Medium") ? "text-[#fbbf24]" : "text-[#f87171]";
@@ -1339,7 +1341,7 @@
                         <td class="py-3 text-right text-[#f87171]">${stock.mdi != null ? stock.mdi.toFixed(1) : '-'}</td>
                         <td class="py-3 text-right font-bold ${trendClass}">${stock.trend_commentary || "-"}</td>
                         <td class="py-3 text-right">${stock.value ? stock.value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
-                        <td class="py-3 text-right font-bold ${recClass}">${stock.recommendation || '-'}</td>
+                        <td class="py-3 text-right font-bold ${recClass}">${recIcon} ${stock.recommendation || '-'}</td>
                     `;
                 } else {
                     rowHtml = `
