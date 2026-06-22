@@ -1190,16 +1190,18 @@ def analyze_stock():
         last_pdi = float(pdi_series.iloc[-1])
         last_mdi = float(mdi_series.iloc[-1])
         pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+        adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
         
         pdi_rising = last_pdi > pdi_5ago
         pdi_above_mdi = last_pdi > last_mdi
         adx_strong = last_adx > 20
+        adx_rising = last_adx > adx_5ago
         is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
 
         # --- Logika Rekomendasi (samakan dengan Basis ADX Screener) ---
         if last_low > last_sl and last_price > last_basis:
             if (not is_nan
-                    and pdi_above_mdi and adx_strong and pdi_rising):
+                    and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
                 recommendation = "BUY"
                 color = "#4ade80"
                 icon = "🟢"
@@ -2821,15 +2823,17 @@ def run_basis_adx_screener(list_path, list_type):
                 last_pdi = float(pdi_series.iloc[-1])
                 last_mdi = float(mdi_series.iloc[-1])
                 pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+                adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
                 
                 pdi_rising = last_pdi > pdi_5ago
                 pdi_above_mdi = last_pdi > last_mdi
                 adx_strong = last_adx > 20
+                adx_rising = last_adx > adx_5ago
                 is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
                 
                 if last_low > last_sl and last_price > last_basis:
                     if (not is_nan
-                            and pdi_above_mdi and adx_strong and pdi_rising):
+                            and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
                         recommendation = "BUY"
                     else:
                         recommendation = "HOLD LONG"
