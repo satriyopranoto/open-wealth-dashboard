@@ -1185,7 +1185,7 @@ def analyze_stock():
         upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
         adx_series, pdi_series, mdi_series = calculate_adx(data)
         
-        last_upper_bb = float(upper_bb.iloc[-1])
+        last_basis = float(middle_bb.iloc[-1])
         last_adx = float(adx_series.iloc[-1])
         last_pdi = float(pdi_series.iloc[-1])
         last_mdi = float(mdi_series.iloc[-1])
@@ -1193,33 +1193,26 @@ def analyze_stock():
         
         pdi_rising = last_pdi > pdi_5ago
         pdi_above_mdi = last_pdi > last_mdi
-        mdi_above_pdi = last_mdi > last_pdi
         adx_strong = last_adx > 20
+        is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
 
-        # --- Logika Rekomendasi (samakan dengan BB Screener) ---
-        if last_price > last_sl and last_price > last_upper_bb:
-            if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
+        # --- Logika Rekomendasi (samakan dengan Basis ADX Screener) ---
+        if last_low > last_sl and last_price > last_basis:
+            if (not is_nan
                     and pdi_above_mdi and adx_strong and pdi_rising):
-                recommendation = "REKOMENDASI: BUY"
+                recommendation = "BUY"
                 color = "#4ade80"
                 icon = "🟢"
             else:
-                recommendation = "REKOMENDASI: HOLD LONG"
+                recommendation = "HOLD LONG"
                 color = "#fbbf24"
                 icon = "🟡"
         elif last_price > last_sl:
-            # Bearish ADX confirmation -> SELL meski masih di atas SL
-            if (not np.isnan(last_adx) and not np.isnan(last_pdi) and not np.isnan(last_mdi)
-                    and mdi_above_pdi and adx_strong):
-                recommendation = "REKOMENDASI: SHORT SELL"
-                color = "#f87171"
-                icon = "🔴"
-            else:
-                recommendation = "REKOMENDASI: HOLD LONG"
-                color = "#fbbf24"
-                icon = "🟡"
+            recommendation = "HOLD LONG"
+            color = "#fbbf24"
+            icon = "🟡"
         else:
-            recommendation = "REKOMENDASI: SHORT SELL"
+            recommendation = "SHORT SELL"
             color = "#f87171"
             icon = "🔴"
 
