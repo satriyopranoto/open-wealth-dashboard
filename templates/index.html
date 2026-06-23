@@ -291,6 +291,18 @@
 <div class="glass-panel p-4 overflow-hidden" id="chart-container">
 <div id="bokeh-chart" class="w-full"></div>
 </div>
+<!-- Trend Analysis (ADX + SMA20) -->
+<div class="glass-panel p-6 trend-analysis-panel" id="trend-analysis-section">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[#d4af37] text-lg flex items-center gap-2">
+<span class="w-6 h-[1px] bg-[#d4af37]"></span> TREND ANALYSIS
+</h3>
+<span class="text-[10px] text-[#99907c] uppercase tracking-wider">ADX(14) + SMA20 &middot; 400d Data</span>
+</div>
+<div id="trend-analysis-content">
+<div class="text-center text-[#99907c] text-sm py-4">Load a stock to see trend analysis.</div>
+</div>
+</div>
 <!-- Insights -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 <div class="space-y-8">
@@ -1014,6 +1026,7 @@
                     resultArea.classList.remove('hidden');
                     renderChart(data);
                     calculateLotSize();
+                    renderTrendAnalysis(data);
                 } else {
                     statusDiv.textContent = 'EXECUTION FAILURE';
                     statusDiv.className = 'error text-red-400';
@@ -1066,6 +1079,94 @@
             const scriptEl = document.createElement('script');
             scriptEl.textContent = data.chart_script;
             container.appendChild(scriptEl);
+        }
+
+        function renderTrendAnalysis(data) {
+            const container = document.getElementById('trend-analysis-content');
+            if (!data || !data.trend_analysis || data.trend_analysis.error) {
+                container.innerHTML = '<div class="text-center text-[#99907c] text-sm py-4">Trend analysis not available.</div>';
+                return;
+            }
+            const ta = data.trend_analysis;
+            
+            const isBullish = ta.classification.includes('BULLISH');
+            const isBearish = ta.classification.includes('BEARISH');
+            const classColor = isBullish ? '#4ade80' : isBearish ? '#f87171' : '#fbbf24';
+            const curPdiAbove = ta.current.pdi_above_mdi;
+            
+            let html = '';
+            
+            // Top row: Classification + summary
+            html += '<div class="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-white/5">';
+            html += '<div class="flex items-center gap-2">';
+            html += '<span class="text-lg">' + ta.class_icon + '</span>';
+            html += '<span class="text-lg font-bold" style="color:' + classColor + '">' + ta.classification + '</span>';
+            html += '</div>';
+            
+            var overallHtml = 'Overall: Bull <span style="color:#4ade80;font-weight:bold">' + ta.bull_pct + '%</span> | Bear <span style="color:#f87171;font-weight:bold">' + ta.bear_pct + '%</span> | Sideway <span style="color:#fbbf24">' + ta.sideway_pct + '%</span>';
+            var last100Color = ta.last100_class.includes('BULLISH') ? '#4ade80' : ta.last100_class.includes('BEARISH') ? '#f87171' : '#fbbf24';
+            var last100Html = 'Last 100: <span style="color:' + last100Color + ';font-weight:bold">' + ta.last100_class + '</span> (' + ta.last100_bull_pct + '% / ' + ta.last100_bear_pct + '%)';
+            
+            html += '<div class="flex items-center gap-4 text-xs" style="color:#eae1d4">';
+            html += '<span>' + overallHtml + '</span>';
+            html += '<span style="color:#666">|</span>';
+            html += '<span>' + last100Html + '</span>';
+            html += '</div></div>';
+            
+            // Two columns: ADX Breakdown | Current Status
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+            
+            // Left: ADX Breakdown
+            html += '<div>';
+            html += '<h4 class="text-[#99907c] text-[10px] uppercase tracking-wider mb-2">ADX Breakdown (' + ta.valid_bars + ' bars)</h4>';
+            html += '<div class="space-y-1.5">';
+            for (var bi = 0; bi < ta.brackets.length; bi++) {
+                var b = ta.brackets[bi];
+                var aboveColor = b.above_pct > 50 ? '#4ade80' : '#f87171';
+                html += '<div class="flex items-center justify-between text-xs py-1 px-2 rounded-sm" style="background:rgba(0,0,0,0.2)">';
+                html += '<span style="color:#eae1d4">' + b.label + '</span>';
+                html += '<span><span style="color:' + aboveColor + ';font-weight:bold">' + b.above_pct + '%</span> / ' + b.below_pct + '%</span>';
+                html += '</div>';
+            }
+            html += '</div></div>';
+            
+            // Right: Current Status
+            html += '<div>';
+            html += '<h4 class="text-[#99907c] text-[10px] uppercase tracking-wider mb-2">Current Status</h4>';
+            html += '<div class="space-y-1.5">';
+            
+            // Price vs SMA20
+            var smaIcon = ta.current.above_sma20 ? '\u25B2' : '\u25BC';
+            var smaColor = ta.current.above_sma20 ? '#4ade80' : '#f87171';
+            html += '<div class="flex items-center justify-between text-xs py-1 px-2 rounded-sm" style="background:rgba(0,0,0,0.2)">';
+            html += '<span style="color:#eae1d4">Price vs SMA20</span>';
+            html += '<span style="color:' + smaColor + '"><span style="font-weight:bold">' + smaIcon + ' ' + ta.current.sma20_dist + '%</span> ($' + ta.current.sma20 + ')</span>';
+            html += '</div>';
+            
+            // ADX
+            var adxColor = ta.current.adx_above_25 ? '#fbbf24' : '#99907c';
+            var adxLabel = ta.current.adx_above_25 ? ' (Strong)' : ' (Weak)';
+            html += '<div class="flex items-center justify-between text-xs py-1 px-2 rounded-sm" style="background:rgba(0,0,0,0.2)">';
+            html += '<span style="color:#eae1d4">ADX(14)</span>';
+            html += '<span style="color:' + adxColor + ';font-weight:bold">' + ta.current.adx + adxLabel + '</span>';
+            html += '</div>';
+            
+            // +/- DI
+            var diIcon = ta.current.pdi_above_mdi ? '\u25B2' : '\u25BC';
+            var diColor = ta.current.pdi_above_mdi ? '#4ade80' : '#f87171';
+            html += '<div class="flex items-center justify-between text-xs py-1 px-2 rounded-sm" style="background:rgba(0,0,0,0.2)">';
+            html += '<span style="color:#eae1d4">+DI / -DI</span>';
+            html += '<span style="color:' + diColor + '"><span style="font-weight:bold">' + diIcon + ' +DI ' + ta.current.pdi + '</span> / -DI ' + ta.current.mdi + '</span>';
+            html += '</div>';
+            
+            html += '</div></div></div>';
+            
+            // Footer
+            html += '<div class="mt-3 pt-3 border-t border-white/5 text-[9px]" style="color:#666;text-align:center">';
+            html += 'Methodology: ADX(14) + SMA20 | Strong &gt;35% | Weak 30-35% | Sideway &lt;30%';
+            html += '</div>';
+            
+            container.innerHTML = html;
         }
 
         function setFairPriceValue(elementId, fairPrice, currentPrice) {
