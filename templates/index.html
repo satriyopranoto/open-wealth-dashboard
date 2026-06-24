@@ -827,6 +827,58 @@
             extractionSuccess.textContent = '0';
             extractionFailed.textContent = '0';
             
+            // Mulai SSE SEBELUM POST supaya User B bisa liat progress User A
+            if (eventSource) {
+                eventSource.close();
+            }
+            eventSource = new EventSource(`${API_BASE_URL}/extract/progress`);
+            eventSource.onmessage = function(event) {
+                try {
+                    const progress = JSON.parse(event.data);
+                    
+                    extractionStatus.textContent = progress.message || 'Processing...';
+                    extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
+                    extractionTicker.textContent = progress.current_ticker || '';
+                    extractionSuccess.textContent = progress.success_count || 0;
+                    extractionFailed.textContent = progress.failed_count || 0;
+                    
+                    if (progress.total > 0) {
+                        const percent = Math.round((progress.progress / progress.total) * 100);
+                        extractionBar.style.width = `${percent}%`;
+                        extractionPercent.textContent = `${percent}%`;
+                    }
+                    
+                    if (progress.status === 'completed') {
+                        statusDiv.textContent = `EXTRACTION COMPLETE: ${progress.success_count} success, ${progress.failed_count} failed`;
+                        statusDiv.className = 'success text-[#4ade80]';
+                        extractionStatus.textContent = 'Completed';
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                    } else if (progress.status === 'error') {
+                        statusDiv.textContent = 'EXTRACTION FAILED';
+                        statusDiv.className = 'error text-red-400';
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing progress:', e);
+                }
+            };
+            
+            eventSource.onerror = function() {
+                if (!eventSource) return;
+                statusDiv.textContent = 'CONNECTION LOST';
+                statusDiv.className = 'error text-red-400';
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+            };
+            
             try {
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                     method: 'POST',
@@ -839,55 +891,16 @@
                     if (response.status === 429) {
                         statusDiv.textContent = 'RATE LIMIT: ' + data.message;
                     } else if (response.status === 409) {
-                        statusDiv.textContent = 'EXTRACTION ALREADY RUNNING';
+                        statusDiv.textContent = 'MONITORING ACTIVE EXTRACTION...';
                     } else {
                         statusDiv.textContent = 'EXTRACTION ERROR: ' + data.message;
                     }
-                    statusDiv.className = 'error text-red-400';
+                    statusDiv.className = 'loading text-[#d4af37]';
                     return;
                 }
                 
                 statusDiv.textContent = 'EXTRACTION IN PROGRESS...';
                 statusDiv.className = 'loading text-[#d4af37]';
-                
-                eventSource = new EventSource(`${API_BASE_URL}/extract/progress`);
-                
-                eventSource.onmessage = function(event) {
-                    try {
-                        const progress = JSON.parse(event.data);
-                        
-                        extractionStatus.textContent = progress.message || 'Processing...';
-                        extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
-                        extractionTicker.textContent = progress.current_ticker || '';
-                        extractionSuccess.textContent = progress.success_count || 0;
-                        extractionFailed.textContent = progress.failed_count || 0;
-                        
-                        if (progress.total > 0) {
-                            const percent = Math.round((progress.progress / progress.total) * 100);
-                            extractionBar.style.width = `${percent}%`;
-                            extractionPercent.textContent = `${percent}%`;
-                        }
-                        
-                        if (progress.status === 'completed') {
-                            statusDiv.textContent = `EXTRACTION COMPLETE: ${progress.success_count} success, ${progress.failed_count} failed`;
-                            statusDiv.className = 'success text-[#4ade80]';
-                            extractionStatus.textContent = 'Completed';
-                            if (eventSource) {
-                                eventSource.close();
-                                eventSource = null;
-                            }
-                        } else if (progress.status === 'error') {
-                            statusDiv.textContent = 'EXTRACTION FAILED';
-                            statusDiv.className = 'error text-red-400';
-                            if (eventSource) {
-                                eventSource.close();
-                                eventSource = null;
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error parsing progress:', e);
-                    }
-                };
                 
                 eventSource.onerror = function() {
                     if (!hasCompleted) {
