@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pygooglenews import GoogleNews
 from log_utils import log_action, _get_client_ip, read_recent_logs
+from collections import defaultdict
 
 # Load environment variables dari file .env
 load_dotenv()
@@ -38,56 +39,96 @@ def serve_assets(filename):
 RETRY_DELAY = 5
 MAX_RETRIES = 3
 
-# Extraction progress tracking
-extraction_progress = {
-    'is_running': False,
-    'current_ticker': '',
-    'progress': 0,
-    'total': 0,
-    'success_count': 0,
-    'failed_count': 0,
-    'status': 'idle',
-    'message': ''
-}
+def _default_extraction_ip():
+    return {
+        'is_running': False,
+        'current_ticker': '',
+        'progress': 0,
+        'total': 0,
+        'success_count': 0,
+        'failed_count': 0,
+        'status': 'idle',
+        'message': '',
+    }
 
-# BB Screener progress tracking
-bb_screener_progress = {
-    'is_running': False,
-    'current_ticker': '',
-    'progress': 0,
-    'total': 0,
-    'results': [],
-    'status': 'idle',
-    'message': ''
-}
+extraction_progress_map = defaultdict(_default_extraction_ip)
 
-# Basis ADX Screener progress tracking
-basis_adx_screener_progress = {
-    'is_running': False,
-    'current_ticker': '',
-    'progress': 0,
-    'total': 0,
-    'results': [],
-    'status': 'idle',
-    'message': ''
-}
+def _default_bb_ip():
+    return {
+        'is_running': False,
+        'current_ticker': '',
+        'progress': 0,
+        'total': 0,
+        'results': [],
+        'status': 'idle',
+        'message': '',
+        'run_id': 0
+    }
 
-# Fundamental Screener progress tracking
-fundamental_screener_progress = {
-    'is_running': False,
-    'current_ticker': '',
-    'progress': 0,
-    'total': 0,
-    'results': [],
-    'status': 'idle',
-    'message': ''
-}
+bb_screener_progress_map = defaultdict(_default_bb_ip)
+
+def _default_basis_adx_ip():
+    return {
+        'is_running': False,
+        'current_ticker': '',
+        'progress': 0,
+        'total': 0,
+        'results': [],
+        'status': 'idle',
+        'message': '',
+        'run_id': 0
+    }
+
+basis_adx_screener_progress_map = defaultdict(_default_basis_adx_ip)
+
+def _default_fundamental_ip():
+    return {
+        'is_running': False,
+        'current_ticker': '',
+        'progress': 0,
+        'total': 0,
+        'results': [],
+        'status': 'idle',
+        'message': '',
+        'run_id': 0
+    }
+
+fundamental_screener_progress_map = defaultdict(_default_fundamental_ip)
 
 # Rate limit threshold dalam menit
 RATE_LIMIT_MINUTES = 60
 SCREENER_COOLDOWN_MINUTES = 30  # BB Screener minimal jeda antar eksekusi
 CACHE_DIR = os.path.join(os.path.dirname(__file__), 'cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Data sync lock untuk multi-user
+DATA_SYNC_LOCK_FILE = os.path.join(CACHE_DIR, '.data_sync_lock')
+
+def acquire_data_sync_lock(client_ip):
+    """Coba acquire lock untuk data sync. Returns (success, owner_ip)."""
+    if os.path.exists(DATA_SYNC_LOCK_FILE):
+        try:
+            with open(DATA_SYNC_LOCK_FILE, 'r') as f:
+                owner_ip = f.read().strip()
+            if owner_ip == client_ip:
+                return True, client_ip
+            return False, owner_ip
+        except Exception:
+            pass
+    try:
+        with open(DATA_SYNC_LOCK_FILE, 'w') as f:
+            f.write(client_ip)
+        return True, client_ip
+    except Exception:
+        return False, 'unknown'
+
+def release_data_sync_lock():
+    """Release lock untuk data sync."""
+    try:
+        if os.path.exists(DATA_SYNC_LOCK_FILE):
+            os.remove(DATA_SYNC_LOCK_FILE)
+    except Exception:
+        pass
 
 # Add CORS headers to all responses
 @app.after_request
@@ -2020,7 +2061,16 @@ def extract_us_stocks():
     log_action('extract', 'start_us_extraction', params={'list': 'uslist.csv'})
     start_time = time.time()
     
-    global extraction_progress
+    _client_ip = _get_client_ip()
+    _extraction = extraction_progress_map[_client_ip]
+    # global extraction_progress  (removed: IP-keyed access)
+    
+    # Data sync lock: cegah 2 user sync bareng
+    lock_ok, lock_owner = acquire_data_sync_lock(_client_ip)
+    if not lock_ok:
+        log_action('extract', 'start_us_extraction', status='error',
+                  detail=f'Data sync locked by {lock_owner}', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Data sync sedang berjalan oleh user lain"}), 409
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     is_safe, minutes_left, message = check_rate_limit_for_list(uslist_path)
@@ -2032,7 +2082,7 @@ def extract_us_stocks():
                   detail=f'Rate limited: {message}', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": message}), 429
     
-    if extraction_progress['is_running']:
+    if _extraction['is_running']:
         print(f"[EXTRACT/US] Extraction already running", flush=True)
         log_action('extract', 'start_us_extraction', status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
@@ -2055,47 +2105,51 @@ def extract_us_stocks():
         print(f"[EXTRACT/US] Loaded {len(tickers)} tickers from uslist.csv", flush=True)
         
         def run_us_extraction():
-            global extraction_progress
-            extraction_progress['is_running'] = True
-            extraction_progress['total'] = len(tickers)
-            extraction_progress['progress'] = 0
-            extraction_progress['success_count'] = 0
-            extraction_progress['failed_count'] = 0
-            extraction_progress['status'] = 'running'
-            extraction_progress['message'] = f'Starting US stocks extraction ({len(tickers)} tickers)...'
-            
-            print(f"[EXTRACTION] Starting US extraction thread for {len(tickers)} tickers", flush=True)
-            
-            for i, ticker in enumerate(tickers):
-                ticker = ticker.strip().upper()
-                extraction_progress['current_ticker'] = ticker
-                extraction_progress['progress'] = i + 1
-                extraction_progress['message'] = f'Downloading {ticker}...'
+            # global extraction_progress  (removed: IP-keyed access)
+            try:
+                _extraction['is_running'] = True
+                _extraction['total'] = len(tickers)
+                _extraction['progress'] = 0
+                _extraction['success_count'] = 0
+                _extraction['failed_count'] = 0
+                _extraction['status'] = 'running'
+                _extraction['message'] = f'Starting US stocks extraction ({len(tickers)} tickers)...'
                 
-                if (i + 1) % 10 == 0 or i == 0:
-                    print(f"[EXTRACTION US] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
+                print(f"[EXTRACTION] Starting US extraction thread for {len(tickers)} tickers", flush=True)
                 
-                try:
-                    data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
-                    if error_msg:
-                        extraction_progress['failed_count'] += 1
-                    else:
-                        extraction_progress['success_count'] += 1
-                except Exception as e:
-                    print(f"[EXTRACTION US] Error downloading {ticker}: {e}", flush=True)
-                    extraction_progress['failed_count'] += 1
+                for i, ticker in enumerate(tickers):
+                    ticker = ticker.strip().upper()
+                    _extraction['current_ticker'] = ticker
+                    _extraction['progress'] = i + 1
+                    _extraction['message'] = f'Downloading {ticker}...'
+                    
+                    if (i + 1) % 10 == 0 or i == 0:
+                        print(f"[EXTRACTION US] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
+                    
+                    try:
+                        data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
+                        if error_msg:
+                            _extraction['failed_count'] += 1
+                        else:
+                            _extraction['success_count'] += 1
+                    except Exception as e:
+                        print(f"[EXTRACTION US] Error downloading {ticker}: {e}", flush=True)
+                        _extraction['failed_count'] += 1
+                    
+                    time.sleep(1)
                 
-                time.sleep(1)
-            
-            extraction_progress['status'] = 'completed'
-            extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
-            extraction_progress['is_running'] = False
-            log_action('extract', 'run_us_extraction', params={'list': 'uslist.csv'}, status='success',
-                      detail=f'{extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed')
-            print(f"[EXTRACTION] US extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
-            
-            # Create rate limit marker for next extraction
-            create_extraction_marker(uslist_path)
+                _extraction['status'] = 'completed'
+                _extraction['message'] = f'Extraction completed: {_extraction["success_count"]} success, {_extraction["failed_count"]} failed'
+                _extraction['is_running'] = False
+                log_action('extract', 'run_us_extraction', params={'list': 'uslist.csv'}, status='success',
+                          detail=f'{_extraction["success_count"]} success, {_extraction["failed_count"]} failed')
+                print(f"[EXTRACTION] US extraction completed: {_extraction['success_count']} success, {_extraction['failed_count']} failed", flush=True)
+                
+                # Create rate limit marker for next extraction
+                create_extraction_marker(uslist_path)
+            finally:
+                # Release data sync lock (even if thread crashes)
+                release_data_sync_lock()
         
         thread = threading.Thread(target=run_us_extraction, daemon=True)
         print(f"[EXTRACT/US] Creating extraction thread", flush=True)
@@ -2115,9 +2169,10 @@ def extract_us_stocks():
         duration = (time.time() - start_time) * 1000
         log_action('extract', 'start_us_extraction', status='error',
                   detail=str(e), duration_ms=duration)
-        extraction_progress['is_running'] = False
-        extraction_progress['status'] = 'error'
-        extraction_progress['message'] = str(e)
+        _extraction['is_running'] = False
+        _extraction['status'] = 'error'
+        _extraction['message'] = str(e)
+        release_data_sync_lock()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/extract/id', methods=['POST', 'OPTIONS'])
@@ -2135,7 +2190,16 @@ def extract_id_stocks():
     log_action('extract', 'start_id_extraction', params={'list': 'idlist.csv'})
     start_time = time.time()
     
-    global extraction_progress
+    _client_ip = _get_client_ip()
+    _extraction = extraction_progress_map[_client_ip]
+    # global extraction_progress  (removed: IP-keyed access)
+    
+    # Data sync lock: cegah 2 user sync bareng
+    lock_ok, lock_owner = acquire_data_sync_lock(_client_ip)
+    if not lock_ok:
+        log_action('extract', 'start_id_extraction', status='error',
+                  detail=f'Data sync locked by {lock_owner}', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Data sync sedang berjalan oleh user lain"}), 409
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     is_safe, minutes_left, message = check_rate_limit_for_list(idlist_path)
@@ -2147,7 +2211,7 @@ def extract_id_stocks():
                   detail=f'Rate limited: {message}', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": message}), 429
     
-    if extraction_progress['is_running']:
+    if _extraction['is_running']:
         print(f"[EXTRACT/ID] Extraction already running", flush=True)
         log_action('extract', 'start_id_extraction', status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
@@ -2170,47 +2234,51 @@ def extract_id_stocks():
         print(f"[EXTRACT/ID] Loaded {len(tickers)} tickers from idlist.csv", flush=True)
         
         def run_id_extraction():
-            global extraction_progress
-            extraction_progress['is_running'] = True
-            extraction_progress['total'] = len(tickers)
-            extraction_progress['progress'] = 0
-            extraction_progress['success_count'] = 0
-            extraction_progress['failed_count'] = 0
-            extraction_progress['status'] = 'running'
-            extraction_progress['message'] = f'Starting ID stocks extraction ({len(tickers)} tickers)...'
-            
-            print(f"[EXTRACTION] Starting ID extraction thread for {len(tickers)} tickers", flush=True)
-            
-            for i, ticker in enumerate(tickers):
-                ticker = ticker.strip().upper()
-                extraction_progress['current_ticker'] = ticker
-                extraction_progress['progress'] = i + 1
-                extraction_progress['message'] = f'Downloading {ticker}...'
+            # global extraction_progress  (removed: IP-keyed access)
+            try:
+                _extraction['is_running'] = True
+                _extraction['total'] = len(tickers)
+                _extraction['progress'] = 0
+                _extraction['success_count'] = 0
+                _extraction['failed_count'] = 0
+                _extraction['status'] = 'running'
+                _extraction['message'] = f'Starting ID stocks extraction ({len(tickers)} tickers)...'
                 
-                if (i + 1) % 10 == 0 or i == 0:
-                    print(f"[EXTRACTION ID] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
+                print(f"[EXTRACTION] Starting ID extraction thread for {len(tickers)} tickers", flush=True)
                 
-                try:
-                    data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
-                    if error_msg:
-                        extraction_progress['failed_count'] += 1
-                    else:
-                        extraction_progress['success_count'] += 1
-                except Exception as e:
-                    print(f"[EXTRACTION ID] Error downloading {ticker}: {e}", flush=True)
-                    extraction_progress['failed_count'] += 1
+                for i, ticker in enumerate(tickers):
+                    ticker = ticker.strip().upper()
+                    _extraction['current_ticker'] = ticker
+                    _extraction['progress'] = i + 1
+                    _extraction['message'] = f'Downloading {ticker}...'
+                    
+                    if (i + 1) % 10 == 0 or i == 0:
+                        print(f"[EXTRACTION ID] Progress: {i + 1}/{len(tickers)} - {ticker}", flush=True)
+                    
+                    try:
+                        data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
+                        if error_msg:
+                            _extraction['failed_count'] += 1
+                        else:
+                            _extraction['success_count'] += 1
+                    except Exception as e:
+                        print(f"[EXTRACTION ID] Error downloading {ticker}: {e}", flush=True)
+                        _extraction['failed_count'] += 1
+                    
+                    time.sleep(1)
                 
-                time.sleep(1)
-            
-            extraction_progress['status'] = 'completed'
-            extraction_progress['message'] = f'Extraction completed: {extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed'
-            extraction_progress['is_running'] = False
-            log_action('extract', 'run_id_extraction', params={'list': 'idlist.csv'}, status='success',
-                      detail=f'{extraction_progress["success_count"]} success, {extraction_progress["failed_count"]} failed')
-            print(f"[EXTRACTION] ID extraction completed: {extraction_progress['success_count']} success, {extraction_progress['failed_count']} failed", flush=True)
-            
-            # Create rate limit marker for next extraction
-            create_extraction_marker(idlist_path)
+                _extraction['status'] = 'completed'
+                _extraction['message'] = f'Extraction completed: {_extraction["success_count"]} success, {_extraction["failed_count"]} failed'
+                _extraction['is_running'] = False
+                log_action('extract', 'run_id_extraction', params={'list': 'idlist.csv'}, status='success',
+                          detail=f'{_extraction["success_count"]} success, {_extraction["failed_count"]} failed')
+                print(f"[EXTRACTION] ID extraction completed: {_extraction['success_count']} success, {_extraction['failed_count']} failed", flush=True)
+                
+                # Create rate limit marker for next extraction
+                create_extraction_marker(idlist_path)
+            finally:
+                # Release data sync lock (even if thread crashes)
+                release_data_sync_lock()
         
         thread = threading.Thread(target=run_id_extraction, daemon=True)
         print(f"[EXTRACT/ID] Creating extraction thread", flush=True)
@@ -2230,9 +2298,10 @@ def extract_id_stocks():
         duration = (time.time() - start_time) * 1000
         log_action('extract', 'start_id_extraction', status='error',
                   detail=str(e), duration_ms=duration)
-        extraction_progress['is_running'] = False
-        extraction_progress['status'] = 'error'
-        extraction_progress['message'] = str(e)
+        _extraction['is_running'] = False
+        _extraction['status'] = 'error'
+        _extraction['message'] = str(e)
+        release_data_sync_lock()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/extract/progress', methods=['GET', 'OPTIONS'])
@@ -2247,22 +2316,25 @@ def extract_progress():
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
     
+    _client_ip = _get_client_ip()
+    _extraction = extraction_progress_map[_client_ip]
+    
     def generate():
         import math
         last_progress = None
         idle_loops = 0
         
         while True:
-            global extraction_progress
+            # global extraction_progress  (removed: IP-keyed access)
             
             current_progress = {
-                'status': extraction_progress['status'],
-                'current_ticker': extraction_progress['current_ticker'],
-                'progress': extraction_progress['progress'],
-                'total': extraction_progress['total'],
-                'success_count': extraction_progress['success_count'],
-                'failed_count': extraction_progress['failed_count'],
-                'message': extraction_progress['message']
+                'status': _extraction['status'],
+                'current_ticker': _extraction['current_ticker'],
+                'progress': _extraction['progress'],
+                'total': _extraction['total'],
+                'success_count': _extraction['success_count'],
+                'failed_count': _extraction['failed_count'],
+                'message': _extraction['message']
             }
             
             if current_progress != last_progress:
@@ -2270,7 +2342,7 @@ def extract_progress():
                 
                 yield f"data: {json.dumps(current_progress)}\n\n"
             
-            if extraction_progress['status'] in ['completed', 'error', 'idle']:
+            if _extraction['status'] in ['completed', 'error', 'idle']:
                 break
             
             time.sleep(1)
@@ -2290,6 +2362,9 @@ def extract_status():
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
     
+    _client_ip = _get_client_ip()
+    _extraction = extraction_progress_map[_client_ip]
+    
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     
@@ -2297,14 +2372,14 @@ def extract_status():
     id_safe, id_minutes, id_message = check_rate_limit_for_list(idlist_path)
     
     return jsonify({
-        "is_running": extraction_progress['is_running'],
-        "status": extraction_progress['status'],
-        "current_ticker": extraction_progress['current_ticker'],
-        "progress": extraction_progress['progress'],
-        "total": extraction_progress['total'],
-        "success_count": extraction_progress['success_count'],
-        "failed_count": extraction_progress['failed_count'],
-        "message": extraction_progress['message'],
+        "is_running": _extraction['is_running'],
+        "status": _extraction['status'],
+        "current_ticker": _extraction['current_ticker'],
+        "progress": _extraction['progress'],
+        "total": _extraction['total'],
+        "success_count": _extraction['success_count'],
+        "failed_count": _extraction['failed_count'],
+        "message": _extraction['message'],
         "rate_limit_us_safe": us_safe,
         "rate_limit_us_minutes_left": us_minutes,
         "rate_limit_us_message": us_message,
@@ -2319,29 +2394,31 @@ def run_bb_screener(list_path, list_type):
     """
     log_action('screener_bb', 'run_bb_screener', params={'type': list_type})
     screener_start = time.time()
-    global bb_screener_progress
+    _client_ip = _get_client_ip()
+    _bb = bb_screener_progress_map[_client_ip]
+    # global bb_screener_progress  (removed: IP-keyed access)
     
     try:
         tickers_df = pd.read_csv(list_path)
         if 'Symbol' not in tickers_df.columns:
-            bb_screener_progress['status'] = 'error'
-            bb_screener_progress['message'] = "Kolom 'Symbol' tidak ditemukan"
+            _bb['status'] = 'error'
+            _bb['message'] = "Kolom 'Symbol' tidak ditemukan"
             return
         
         tickers = tickers_df['Symbol'].tolist()
         
-        bb_screener_progress['is_running'] = True
-        bb_screener_progress['total'] = len(tickers)
-        bb_screener_progress['progress'] = 0
-        bb_screener_progress['results'] = []
-        bb_screener_progress['status'] = 'running'
-        bb_screener_progress['message'] = f'Starting BB Screener for {list_type} ({len(tickers)} tickers)...'
+        _bb['is_running'] = True
+        _bb['total'] = len(tickers)
+        _bb['progress'] = 0
+        _bb['results'] = []
+        _bb['status'] = 'running'
+        _bb['message'] = f'Starting BB Screener for {list_type} ({len(tickers)} tickers)...'
         
         for i, ticker in enumerate(tickers):
             ticker = ticker.strip().upper()
-            bb_screener_progress['current_ticker'] = ticker
-            bb_screener_progress['progress'] = i + 1
-            bb_screener_progress['message'] = f'Analyzing {ticker}...'
+            _bb['current_ticker'] = ticker
+            _bb['progress'] = i + 1
+            _bb['message'] = f'Analyzing {ticker}...'
             
             try:
                 data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
@@ -2350,7 +2427,7 @@ def run_bb_screener(list_path, list_type):
                 
                 if error_msg or data is None or (hasattr(data, 'empty') and data.empty):
                     print(f"BB Screener - {ticker}: No data or error")
-                    bb_screener_progress['message'] = f'{ticker}: No data'
+                    _bb['message'] = f'{ticker}: No data'
                     continue
                 
                 if isinstance(data.columns, pd.MultiIndex):
@@ -2371,7 +2448,7 @@ def run_bb_screener(list_path, list_type):
                 print(f"BB Screener - {ticker}: data length = {len(data)}")
                 
                 if len(data) < 25:
-                    bb_screener_progress['message'] = f'{ticker}: Insufficient data'
+                    _bb['message'] = f'{ticker}: Insufficient data'
                     continue
                 
                 sl_series = calculate_sl(data)
@@ -2384,7 +2461,7 @@ def run_bb_screener(list_path, list_type):
                 last_volume = float(data['Volume'].iloc[-1]) if 'Volume' in data.columns else 0
                 
                 if np.isnan(last_sl) or np.isnan(last_upper_bb):
-                    bb_screener_progress['message'] = f'{ticker}: Invalid SL or BB data'
+                    _bb['message'] = f'{ticker}: Invalid SL or BB data'
                     continue
                 
                 yesterday_close = float(data['Close'].iloc[-2]) if len(data) >= 2 else last_price
@@ -2440,30 +2517,30 @@ def run_bb_screener(list_path, list_type):
                     'trend_commentary': trend_commentary
                 }
                 
-                bb_screener_progress['results'].append(result_item)
+                _bb['results'].append(result_item)
                 
                 print(f"BB Screener - {ticker}: price={last_price}, volume={last_volume}, value={value_in_millions:.2f}M")
-                bb_screener_progress['message'] = f'{ticker}: {recommendation}'
+                _bb['message'] = f'{ticker}: {recommendation}'
                 
             except Exception as e:
                 print(f"Error analyzing {ticker}: {e}")
-                bb_screener_progress['message'] = f'{ticker}: Error'
+                _bb['message'] = f'{ticker}: Error'
                 continue
             
             time.sleep(0.5)
         
-        bb_screener_progress['status'] = 'completed'
+        _bb['status'] = 'completed'
         # Sort results by value in descending order
-        bb_screener_progress['results'] = sorted(bb_screener_progress['results'], key=lambda x: x.get('value', 0), reverse=True)
-        bb_screener_progress['message'] = f'BB Screener completed: {len(bb_screener_progress["results"])} stocks analyzed'
-        bb_screener_progress['is_running'] = False
+        _bb['results'] = sorted(_bb['results'], key=lambda x: x.get('value', 0), reverse=True)
+        _bb['message'] = f'BB Screener completed: {len(_bb["results"])} stocks analyzed'
+        _bb['is_running'] = False
         log_action('screener_bb', 'run_bb_screener', params={'type': list_type}, status='success',
-                  detail=f'{len(bb_screener_progress["results"])} stocks analyzed')
+                  detail=f'{len(_bb["results"])} stocks analyzed')
         
     except Exception as e:
-        bb_screener_progress['status'] = 'error'
-        bb_screener_progress['message'] = str(e)
-        bb_screener_progress['is_running'] = False
+        _bb['status'] = 'error'
+        _bb['message'] = str(e)
+        _bb['is_running'] = False
         log_action('screener_bb', 'run_bb_screener', params={'type': list_type}, status='error',
                   detail=str(e))
 
@@ -2482,22 +2559,24 @@ def screener_us_bb_breakout():
     log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'})
     start_time = time.time()
     
-    global bb_screener_progress
+    _client_ip = _get_client_ip()
+    _bb = bb_screener_progress_map[_client_ip]
+    # global bb_screener_progress  (removed: IP-keyed access)
     
     # Check if already running BEFORE resetting anything
-    if bb_screener_progress['is_running']:
+    if _bb['is_running']:
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     # Reset progress immediately to avoid stale SSE state from previous run
-    bb_screener_progress['status'] = 'starting'
-    bb_screener_progress['current_ticker'] = ''
-    bb_screener_progress['progress'] = 0
-    bb_screener_progress['total'] = 0
-    bb_screener_progress['results'] = []
-    bb_screener_progress['message'] = 'Initializing...'
-    bb_screener_progress['is_running'] = False
+    _bb['status'] = 'starting'
+    _bb['current_ticker'] = ''
+    _bb['progress'] = 0
+    _bb['total'] = 0
+    _bb['results'] = []
+    _bb['message'] = 'Initializing...'
+    _bb['is_running'] = False
     
     # STEP 1: Check data sync marker (extraction marker)
     if not check_extraction_marker_exists('uslist'):
@@ -2515,9 +2594,9 @@ def screener_us_bb_breakout():
         if cached_data is not None:
             log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
-            bb_screener_progress['results'] = cached_data.to_dict('records')
-            bb_screener_progress['status'] = 'completed'
-            bb_screener_progress['progress'] = len(cached_data)
+            _bb['results'] = cached_data.to_dict('records')
+            _bb['status'] = 'completed'
+            _bb['progress'] = len(cached_data)
             clean_records = []
             for item in cached_data.to_dict('records'):
                 cleaned = {}
@@ -2545,23 +2624,23 @@ def screener_us_bb_breakout():
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
-        bb_screener_progress['is_running'] = True
+        _bb['is_running'] = True
         
         run_bb_screener(uslist_path, 'US')
         
-        if bb_screener_progress['results']:
-            results_df = pd.DataFrame(bb_screener_progress['results'])
+        if _bb['results']:
+            results_df = pd.DataFrame(_bb['results'])
             save_screener_to_cache('us-bb-breakout', results_df)
         touch_screener_marker('us-bb-breakout')
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_bb', 'us_bb_breakout', params={'market': 'US'}, status='success',
-                  detail=f'{len(bb_screener_progress["results"])} results', duration_ms=duration)
+                  detail=f'{len(_bb["results"])} results', duration_ms=duration)
         response = jsonify({
             "status": "success",
-            "message": bb_screener_progress['message'],
-            "count": len(bb_screener_progress['results']),
-            "data": bb_screener_progress['results']
+            "message": _bb['message'],
+            "count": len(_bb['results']),
+            "data": _bb['results']
         })
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
@@ -2589,22 +2668,24 @@ def screener_id_bb_breakout():
     log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'})
     start_time = time.time()
     
-    global bb_screener_progress
+    _client_ip = _get_client_ip()
+    _bb = bb_screener_progress_map[_client_ip]
+    # global bb_screener_progress  (removed: IP-keyed access)
     
     # Check if already running BEFORE resetting anything
-    if bb_screener_progress['is_running']:
+    if _bb['is_running']:
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "BB Screener sedang berjalan"}), 409
     
     # Reset progress immediately to avoid stale SSE state from previous run
-    bb_screener_progress['status'] = 'starting'
-    bb_screener_progress['current_ticker'] = ''
-    bb_screener_progress['progress'] = 0
-    bb_screener_progress['total'] = 0
-    bb_screener_progress['results'] = []
-    bb_screener_progress['message'] = 'Initializing...'
-    bb_screener_progress['is_running'] = False
+    _bb['status'] = 'starting'
+    _bb['current_ticker'] = ''
+    _bb['progress'] = 0
+    _bb['total'] = 0
+    _bb['results'] = []
+    _bb['message'] = 'Initializing...'
+    _bb['is_running'] = False
     
     # STEP 1: Check data sync marker (extraction marker)
     if not check_extraction_marker_exists('idlist'):
@@ -2622,9 +2703,9 @@ def screener_id_bb_breakout():
         if cached_data is not None:
             log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
-            bb_screener_progress['results'] = cached_data.to_dict('records')
-            bb_screener_progress['status'] = 'completed'
-            bb_screener_progress['progress'] = len(cached_data)
+            _bb['results'] = cached_data.to_dict('records')
+            _bb['status'] = 'completed'
+            _bb['progress'] = len(cached_data)
             clean_records = []
             for item in cached_data.to_dict('records'):
                 cleaned = {}
@@ -2652,23 +2733,23 @@ def screener_id_bb_breakout():
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
-        bb_screener_progress['is_running'] = True
+        _bb['is_running'] = True
         
         run_bb_screener(idlist_path, 'ID')
         
-        if bb_screener_progress['results']:
-            results_df = pd.DataFrame(bb_screener_progress['results'])
+        if _bb['results']:
+            results_df = pd.DataFrame(_bb['results'])
             save_screener_to_cache('id-bb-breakout', results_df)
         touch_screener_marker('id-bb-breakout')
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_bb', 'id_bb_breakout', params={'market': 'ID'}, status='success',
-                  detail=f'{len(bb_screener_progress["results"])} results', duration_ms=duration)
+                  detail=f'{len(_bb["results"])} results', duration_ms=duration)
         response = jsonify({
             "status": "success",
-            "message": bb_screener_progress['message'],
-            "count": len(bb_screener_progress['results']),
-            "data": bb_screener_progress['results']
+            "message": _bb['message'],
+            "count": len(_bb['results']),
+            "data": _bb['results']
         })
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
@@ -2692,28 +2773,37 @@ def screener_bb_progress():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
+    
+    _client_ip = _get_client_ip()
+    _bb = bb_screener_progress_map[_client_ip]
+    
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
 
+        # global bb_screener_progress  (removed: IP-keyed access)
+        _connected_run_id = _bb["run_id"]  # Capture run_id saat SSE connect
         while True:
-            global bb_screener_progress
 
             current_progress = {
-                'status': bb_screener_progress['status'],
-                'current_ticker': bb_screener_progress['current_ticker'],
-                'progress': bb_screener_progress['progress'],
-                'total': bb_screener_progress['total'],
-                'results_count': len(bb_screener_progress['results']),
-                'message': bb_screener_progress['message']
+                'status': _bb['status'],
+                'current_ticker': _bb['current_ticker'],
+                'progress': _bb['progress'],
+                'total': _bb['total'],
+                'results_count': len(_bb['results']),
+                'message': _bb['message'],
+                'run_id': _bb['run_id'],
             }
 
             # Cache hit: completed with results -> fresh, emit and break
             if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
+                # Cek apakah ini stale (dari run sebelumnya)
+                if _connected_run_id == current_progress.get("run_id", 0):
+                    time.sleep(0.5)
+                    continue
                 if current_progress != last_progress:
                     yield "data: " + json.dumps(current_progress) + "\n\n"
-                # Clean break — no reconnect needed, status already final
                 break
             
             # If API just reset state but we had completed before -> check if data exists
@@ -2753,35 +2843,37 @@ def run_basis_adx_screener(list_path, list_type):
     """
     log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type})
     screener_start = time.time()
-    global basis_adx_screener_progress
+    _client_ip = _get_client_ip()
+    _basis = basis_adx_screener_progress_map[_client_ip]
+    # global basis_adx_screener_progress  (removed: IP-keyed access)
     
     try:
         tickers_df = pd.read_csv(list_path)
         if 'Symbol' not in tickers_df.columns:
-            basis_adx_screener_progress['status'] = 'error'
-            basis_adx_screener_progress['message'] = "Kolom 'Symbol' tidak ditemukan"
+            _basis['status'] = 'error'
+            _basis['message'] = "Kolom 'Symbol' tidak ditemukan"
             return
         
         tickers = tickers_df['Symbol'].tolist()
         
-        basis_adx_screener_progress['is_running'] = True
-        basis_adx_screener_progress['total'] = len(tickers)
-        basis_adx_screener_progress['progress'] = 0
-        basis_adx_screener_progress['results'] = []
-        basis_adx_screener_progress['status'] = 'running'
-        basis_adx_screener_progress['message'] = f'Starting Basis ADX Screener for {list_type} ({len(tickers)} tickers)...'
+        _basis['is_running'] = True
+        _basis['total'] = len(tickers)
+        _basis['progress'] = 0
+        _basis['results'] = []
+        _basis['status'] = 'running'
+        _basis['message'] = f'Starting Basis ADX Screener for {list_type} ({len(tickers)} tickers)...'
         
         for i, ticker in enumerate(tickers):
             ticker = ticker.strip().upper()
-            basis_adx_screener_progress['current_ticker'] = ticker
-            basis_adx_screener_progress['progress'] = i + 1
-            basis_adx_screener_progress['message'] = f'Analyzing {ticker}...'
+            _basis['current_ticker'] = ticker
+            _basis['progress'] = i + 1
+            _basis['message'] = f'Analyzing {ticker}...'
             
             try:
                 data, _, error_msg = download_stock_data(ticker, period="400d", force_refresh=False)
                 
                 if error_msg or data is None or (hasattr(data, 'empty') and data.empty):
-                    basis_adx_screener_progress['message'] = f'{ticker}: No data'
+                    _basis['message'] = f'{ticker}: No data'
                     continue
                 
                 if isinstance(data.columns, pd.MultiIndex):
@@ -2799,7 +2891,7 @@ def run_basis_adx_screener(list_path, list_type):
                     print(f"Basis ADX Screener - {ticker}: dropped {dropped} incomplete row(s)")
                 
                 if len(data) < 220:
-                    basis_adx_screener_progress['message'] = f'{ticker}: Insufficient data'
+                    _basis['message'] = f'{ticker}: Insufficient data'
                     continue
                 
                 sl_series = calculate_sl(data)
@@ -2813,7 +2905,7 @@ def run_basis_adx_screener(list_path, list_type):
                 last_volume = float(data['Volume'].iloc[-1]) if 'Volume' in data.columns else 0
                 
                 if np.isnan(last_sl) or np.isnan(last_basis):
-                    basis_adx_screener_progress['message'] = f'{ticker}: Invalid SL or Basis data'
+                    _basis['message'] = f'{ticker}: Invalid SL or Basis data'
                     continue
                 
                 yesterday_close = float(data['Close'].iloc[-2]) if len(data) >= 2 else last_price
@@ -2865,27 +2957,27 @@ def run_basis_adx_screener(list_path, list_type):
                     'trend_commentary': trend_commentary
                 }
                 
-                basis_adx_screener_progress['results'].append(result_item)
-                basis_adx_screener_progress['message'] = f'{ticker}: {recommendation}'
+                _basis['results'].append(result_item)
+                _basis['message'] = f'{ticker}: {recommendation}'
                 
             except Exception as e:
                 print(f"Error analyzing {ticker}: {e}")
-                basis_adx_screener_progress['message'] = f'{ticker}: Error'
+                _basis['message'] = f'{ticker}: Error'
                 continue
             
             time.sleep(0.5)
         
-        basis_adx_screener_progress['status'] = 'completed'
-        basis_adx_screener_progress['results'] = sorted(basis_adx_screener_progress['results'], key=lambda x: x.get('value', 0), reverse=True)
-        basis_adx_screener_progress['message'] = f'Basis ADX Screener completed: {len(basis_adx_screener_progress["results"])} stocks analyzed'
-        basis_adx_screener_progress['is_running'] = False
+        _basis['status'] = 'completed'
+        _basis['results'] = sorted(_basis['results'], key=lambda x: x.get('value', 0), reverse=True)
+        _basis['message'] = f'Basis ADX Screener completed: {len(_basis["results"])} stocks analyzed'
+        _basis['is_running'] = False
         log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='success',
-                  detail=f'{len(basis_adx_screener_progress["results"])} stocks analyzed')
+                  detail=f'{len(_basis["results"])} stocks analyzed')
         
     except Exception as e:
-        basis_adx_screener_progress['status'] = 'error'
-        basis_adx_screener_progress['message'] = str(e)
-        basis_adx_screener_progress['is_running'] = False
+        _basis['status'] = 'error'
+        _basis['message'] = str(e)
+        _basis['is_running'] = False
         log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='error',
                   detail=str(e))
 
@@ -2895,29 +2987,31 @@ def run_fundamental_screener(list_path, list_type):
     Helper function untuk menjalankan fundamental screener pada watchlist
     """
     log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type})
-    global fundamental_screener_progress
+    _client_ip = _get_client_ip()
+    _fund = fundamental_screener_progress_map[_client_ip]
+    # global fundamental_screener_progress  (removed: IP-keyed access)
     
     try:
         tickers_df = pd.read_csv(list_path)
         if 'Symbol' not in tickers_df.columns:
-            fundamental_screener_progress['status'] = 'error'
-            fundamental_screener_progress['message'] = "Kolom 'Symbol' tidak ditemukan"
+            _fund['status'] = 'error'
+            _fund['message'] = "Kolom 'Symbol' tidak ditemukan"
             return
         
         tickers = tickers_df['Symbol'].tolist()
         
-        fundamental_screener_progress['is_running'] = True
-        fundamental_screener_progress['total'] = len(tickers)
-        fundamental_screener_progress['progress'] = 0
-        fundamental_screener_progress['results'] = []
-        fundamental_screener_progress['status'] = 'running'
-        fundamental_screener_progress['message'] = f'Starting Fundamental Screener for {list_type} ({len(tickers)} tickers)...'
+        _fund['is_running'] = True
+        _fund['total'] = len(tickers)
+        _fund['progress'] = 0
+        _fund['results'] = []
+        _fund['status'] = 'running'
+        _fund['message'] = f'Starting Fundamental Screener for {list_type} ({len(tickers)} tickers)...'
         
         for i, ticker in enumerate(tickers):
             ticker = ticker.strip().upper()
-            fundamental_screener_progress['current_ticker'] = ticker
-            fundamental_screener_progress['progress'] = i + 1
-            fundamental_screener_progress['message'] = f'Analyzing {ticker}...'
+            _fund['current_ticker'] = ticker
+            _fund['progress'] = i + 1
+            _fund['message'] = f'Analyzing {ticker}...'
             
             try:
                 # Ambil data fundamental (pake cache 24 jam, jangan paksa refresh tiap kali)
@@ -2948,7 +3042,7 @@ def run_fundamental_screener(list_path, list_type):
                 
                 if err or fundamental_data is None:
                     print(f"Fundamental Screener - {ticker}: Missing fundamentals (err={err})")
-                    fundamental_screener_progress['message'] = f'{ticker}: No data'
+                    _fund['message'] = f'{ticker}: No data'
                     continue
                 
                 op_margin = clean_float(fundamental_data.get('operating_margin'))
@@ -2961,7 +3055,7 @@ def run_fundamental_screener(list_path, list_type):
                 current_price_clean = clean_float(current_price)
                 if current_price_clean is None:
                     print(f"Fundamental Screener - {ticker}: Missing price")
-                    fundamental_screener_progress['message'] = f'{ticker}: No price'
+                    _fund['message'] = f'{ticker}: No price'
                     continue
                 
                 # 1. operating margin > 0
@@ -3007,28 +3101,28 @@ def run_fundamental_screener(list_path, list_type):
                     'conclusion': conclusion
                 }
                 
-                fundamental_screener_progress['results'].append(result_item)
-                fundamental_screener_progress['message'] = f'{ticker}: {conclusion}'
+                _fund['results'].append(result_item)
+                _fund['message'] = f'{ticker}: {conclusion}'
                 
             except Exception as e:
                 print(f"Error analyzing fundamentals for {ticker}: {e}")
-                fundamental_screener_progress['message'] = f'{ticker}: Error'
+                _fund['message'] = f'{ticker}: Error'
                 continue
             # Delay antar ticker biar gak kena rate limit Yahoo Finance
             # Random ~1.5-2.5 detik biar natural
             sleep_time = 1.5 + (hash(ticker) % 10) / 10.0
             time.sleep(sleep_time)
             
-        fundamental_screener_progress['status'] = 'completed'
-        fundamental_screener_progress['message'] = f'Fundamental Screener completed: {len(fundamental_screener_progress["results"])} stocks analyzed'
-        fundamental_screener_progress['is_running'] = False
+        _fund['status'] = 'completed'
+        _fund['message'] = f'Fundamental Screener completed: {len(_fund["results"])} stocks analyzed'
+        _fund['is_running'] = False
         log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type}, status='success',
-                  detail=f'{len(fundamental_screener_progress["results"])} stocks analyzed')
+                  detail=f'{len(_fund["results"])} stocks analyzed')
                   
     except Exception as e:
-        fundamental_screener_progress['status'] = 'error'
-        fundamental_screener_progress['message'] = str(e)
-        fundamental_screener_progress['is_running'] = False
+        _fund['status'] = 'error'
+        _fund['message'] = str(e)
+        _fund['is_running'] = False
         log_action('screener_fundamental', 'run_fundamental_screener', params={'type': list_type}, status='error',
                   detail=str(e))
 
@@ -3046,20 +3140,23 @@ def screener_us_basis_adx():
     log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'})
     start_time = time.time()
     
-    global basis_adx_screener_progress
+    _client_ip = _get_client_ip()
+    _basis = basis_adx_screener_progress_map[_client_ip]
+    # global basis_adx_screener_progress  (removed: IP-keyed access)
     
-    if basis_adx_screener_progress['is_running']:
+    if _basis['is_running']:
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Basis ADX Screener sedang berjalan"}), 409
     
-    basis_adx_screener_progress['status'] = 'starting'
-    basis_adx_screener_progress['current_ticker'] = ''
-    basis_adx_screener_progress['progress'] = 0
-    basis_adx_screener_progress['total'] = 0
-    basis_adx_screener_progress['results'] = []
-    basis_adx_screener_progress['message'] = 'Initializing...'
-    basis_adx_screener_progress['is_running'] = False
+    _basis['status'] = 'starting'
+    _basis['current_ticker'] = ''
+    _basis['progress'] = 0
+    _basis['total'] = 0
+    _basis['results'] = []
+    _basis['message'] = 'Initializing...'
+    _basis['is_running'] = False
+    _basis["run_id"] += 1  # Track new run
     
     if not check_extraction_marker_exists('uslist'):
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
@@ -3071,9 +3168,9 @@ def screener_us_basis_adx():
         if cached_data is not None:
             log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
-            basis_adx_screener_progress['results'] = cached_data.to_dict('records')
-            basis_adx_screener_progress['status'] = 'completed'
-            basis_adx_screener_progress['progress'] = len(cached_data)
+            _basis['results'] = cached_data.to_dict('records')
+            _basis['status'] = 'completed'
+            _basis['progress'] = len(cached_data)
             clean_records = []
             for item in cached_data.to_dict('records'):
                 cleaned = {}
@@ -3092,17 +3189,17 @@ def screener_us_basis_adx():
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
     
     try:
-        basis_adx_screener_progress['is_running'] = True
+        _basis['is_running'] = True
         run_basis_adx_screener(uslist_path, 'US')
-        if basis_adx_screener_progress['results']:
-            results_df = pd.DataFrame(basis_adx_screener_progress['results'])
+        if _basis['results']:
+            results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('us-basis-adx', results_df)
         touch_screener_marker('us-basis-adx')
         duration = (time.time() - start_time) * 1000
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
-                  detail=f'{len(basis_adx_screener_progress["results"])} results', duration_ms=duration)
-        return jsonify({"status": "success", "message": basis_adx_screener_progress['message'],
-            "count": len(basis_adx_screener_progress['results']), "data": basis_adx_screener_progress['results']})
+                  detail=f'{len(_basis["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": _basis['message'],
+            "count": len(_basis['results']), "data": _basis['results']})
     except Exception as e:
         duration = (time.time() - start_time) * 1000
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error', detail=str(e), duration_ms=duration)
@@ -3122,20 +3219,23 @@ def screener_id_basis_adx():
     log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'})
     start_time = time.time()
     
-    global basis_adx_screener_progress
+    _client_ip = _get_client_ip()
+    _basis = basis_adx_screener_progress_map[_client_ip]
+    # global basis_adx_screener_progress  (removed: IP-keyed access)
     
-    if basis_adx_screener_progress['is_running']:
+    if _basis['is_running']:
         log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Basis ADX Screener sedang berjalan"}), 409
     
-    basis_adx_screener_progress['status'] = 'starting'
-    basis_adx_screener_progress['current_ticker'] = ''
-    basis_adx_screener_progress['progress'] = 0
-    basis_adx_screener_progress['total'] = 0
-    basis_adx_screener_progress['results'] = []
-    basis_adx_screener_progress['message'] = 'Initializing...'
-    basis_adx_screener_progress['is_running'] = False
+    _basis['status'] = 'starting'
+    _basis['current_ticker'] = ''
+    _basis['progress'] = 0
+    _basis['total'] = 0
+    _basis['results'] = []
+    _basis['message'] = 'Initializing...'
+    _basis['is_running'] = False
+    _basis["run_id"] += 1  # Track new run
     
     if not check_extraction_marker_exists('idlist'):
         log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
@@ -3147,9 +3247,9 @@ def screener_id_basis_adx():
         if cached_data is not None:
             log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
                       detail=f'cached: {len(cached_data)} results')
-            basis_adx_screener_progress['results'] = cached_data.to_dict('records')
-            basis_adx_screener_progress['status'] = 'completed'
-            basis_adx_screener_progress['progress'] = len(cached_data)
+            _basis['results'] = cached_data.to_dict('records')
+            _basis['status'] = 'completed'
+            _basis['progress'] = len(cached_data)
             clean_records = []
             for item in cached_data.to_dict('records'):
                 cleaned = {}
@@ -3168,17 +3268,17 @@ def screener_id_basis_adx():
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
     
     try:
-        basis_adx_screener_progress['is_running'] = True
+        _basis['is_running'] = True
         run_basis_adx_screener(idlist_path, 'ID')
-        if basis_adx_screener_progress['results']:
-            results_df = pd.DataFrame(basis_adx_screener_progress['results'])
+        if _basis['results']:
+            results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('id-basis-adx', results_df)
         touch_screener_marker('id-basis-adx')
         duration = (time.time() - start_time) * 1000
         log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
-                  detail=f'{len(basis_adx_screener_progress["results"])} results', duration_ms=duration)
-        return jsonify({"status": "success", "message": basis_adx_screener_progress['message'],
-            "count": len(basis_adx_screener_progress['results']), "data": basis_adx_screener_progress['results']})
+                  detail=f'{len(_basis["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": _basis['message'],
+            "count": len(_basis['results']), "data": _basis['results']})
     except Exception as e:
         duration = (time.time() - start_time) * 1000
         log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error', detail=str(e), duration_ms=duration)
@@ -3195,21 +3295,31 @@ def screener_basis_adx_progress():
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
     
+    _client_ip = _get_client_ip()
+    _basis = basis_adx_screener_progress_map[_client_ip]
+    
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
+        # global basis_adx_screener_progress  (removed: IP-keyed access)
+        _connected_run_id = _basis["run_id"]  # Capture run_id saat SSE connect
         while True:
-            global basis_adx_screener_progress
             current_progress = {
-                'status': basis_adx_screener_progress['status'],
-                'current_ticker': basis_adx_screener_progress['current_ticker'],
-                'progress': basis_adx_screener_progress['progress'],
-                'total': basis_adx_screener_progress['total'],
-                'results_count': len(basis_adx_screener_progress['results']),
-                'message': basis_adx_screener_progress['message']
+                'status': _basis['status'],
+                'current_ticker': _basis['current_ticker'],
+                'progress': _basis['progress'],
+                'total': _basis['total'],
+                'results_count': len(_basis['results']),
+                'message': _basis['message'],
+                'run_id': _basis['run_id'],
             }
             if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
+                # Cek apakah ini stale (dari run sebelumnya)
+                if _connected_run_id == current_progress.get('run_id', 0):
+                    # Stale completed dari run sebelumnya. Tunggu POST handler reset.
+                    time.sleep(0.5)
+                    continue
                 if current_progress != last_progress:
                     yield "data: " + json.dumps(current_progress) + "\n\n"
                 break
@@ -3249,7 +3359,9 @@ def screener_us_fundamental():
     log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'})
     start_time = time.time()
     
-    global fundamental_screener_progress
+    _client_ip = _get_client_ip()
+    _fund = fundamental_screener_progress_map[_client_ip]
+    # global fundamental_screener_progress  (removed: IP-keyed access)
     
     use_cache, run_timestamp = check_fundamental_run_status('US')
     if use_cache:
@@ -3269,7 +3381,7 @@ def screener_us_fundamental():
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     
-    if fundamental_screener_progress['is_running']:
+    if _fund['is_running']:
         log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Fundamental Screener sedang berjalan"}), 409
@@ -3282,8 +3394,8 @@ def screener_us_fundamental():
     try:
         run_fundamental_screener(uslist_path, 'US')
         
-        if fundamental_screener_progress['results']:
-            results_df = pd.DataFrame(fundamental_screener_progress['results'])
+        if _fund['results']:
+            results_df = pd.DataFrame(_fund['results'])
             save_screener_to_cache('us-fundamental', results_df)
             
             run_file = os.path.join(CACHE_DIR, '.fundamental_us_run.txt')
@@ -3292,12 +3404,12 @@ def screener_us_fundamental():
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='success',
-                  detail=f'{len(fundamental_screener_progress["results"])} results', duration_ms=duration)
-        records = clean_nan_in_records(fundamental_screener_progress['results'])
+                  detail=f'{len(_fund["results"])} results', duration_ms=duration)
+        records = clean_nan_in_records(_fund['results'])
         response = jsonify({
             "status": "success",
-            "message": fundamental_screener_progress['message'],
-            "count": len(fundamental_screener_progress['results']),
+            "message": _fund['message'],
+            "count": len(_fund['results']),
             "data": records
         })
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -3324,7 +3436,9 @@ def screener_id_fundamental():
     log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'})
     start_time = time.time()
     
-    global fundamental_screener_progress
+    _client_ip = _get_client_ip()
+    _fund = fundamental_screener_progress_map[_client_ip]
+    # global fundamental_screener_progress  (removed: IP-keyed access)
     
     use_cache, run_timestamp = check_fundamental_run_status('ID')
     if use_cache:
@@ -3344,7 +3458,7 @@ def screener_id_fundamental():
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     
-    if fundamental_screener_progress['is_running']:
+    if _fund['is_running']:
         log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='error',
                   detail='Already running', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "Fundamental Screener sedang berjalan"}), 409
@@ -3357,8 +3471,8 @@ def screener_id_fundamental():
     try:
         run_fundamental_screener(idlist_path, 'ID')
         
-        if fundamental_screener_progress['results']:
-            results_df = pd.DataFrame(fundamental_screener_progress['results'])
+        if _fund['results']:
+            results_df = pd.DataFrame(_fund['results'])
             save_screener_to_cache('id-fundamental', results_df)
             
             run_file = os.path.join(CACHE_DIR, '.fundamental_id_run.txt')
@@ -3367,12 +3481,12 @@ def screener_id_fundamental():
         
         duration = (time.time() - start_time) * 1000
         log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='success',
-                  detail=f'{len(fundamental_screener_progress["results"])} results', duration_ms=duration)
-        records = clean_nan_in_records(fundamental_screener_progress['results'])
+                  detail=f'{len(_fund["results"])} results', duration_ms=duration)
+        records = clean_nan_in_records(_fund['results'])
         response = jsonify({
             "status": "success",
-            "message": fundamental_screener_progress['message'],
-            "count": len(fundamental_screener_progress['results']),
+            "message": _fund['message'],
+            "count": len(_fund['results']),
             "data": records
         })
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -3396,20 +3510,25 @@ def screener_fundamental_progress():
         response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
         return response
     
+    _client_ip = _get_client_ip()
+    _fund = fundamental_screener_progress_map[_client_ip]
+    
     def generate():
         last_progress = None
         idle_loops = 0
         
+        # global fundamental_screener_progress  (removed: IP-keyed access)
+        _connected_run_id = _fund["run_id"]
         while True:
-            global fundamental_screener_progress
             
             current_progress = {
-                'status': fundamental_screener_progress['status'],
-                'current_ticker': fundamental_screener_progress['current_ticker'],
-                'progress': fundamental_screener_progress['progress'],
-                'total': fundamental_screener_progress['total'],
-                'results_count': len(fundamental_screener_progress['results']),
-                'message': fundamental_screener_progress['message']
+                'status': _fund['status'],
+                'current_ticker': _fund['current_ticker'],
+                'progress': _fund['progress'],
+                'total': _fund['total'],
+                'results_count': len(_fund['results']),
+                'message': _fund['message'],
+                'run_id': _fund['run_id'],
             }
             
             if current_progress != last_progress:
@@ -3417,11 +3536,11 @@ def screener_fundamental_progress():
                 
                 yield f"data: {json.dumps(current_progress)}\n\n"
             
-            if fundamental_screener_progress['status'] in ['completed', 'error']:
+            if _fund['status'] in ['completed', 'error']:
                 break
             
             # Safety: kalo idle > 30 detik, tutup SSE
-            if fundamental_screener_progress['status'] == 'idle':
+            if _fund['status'] == 'idle':
                 idle_loops += 1
                 if idle_loops > 30:
                     yield 'data: {"status": "timeout", "message": "No active screener"}' + chr(92)*2 + 'n' + chr(92)*2 + 'n'
