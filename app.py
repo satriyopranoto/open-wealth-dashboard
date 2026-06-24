@@ -2317,14 +2317,28 @@ def extract_progress():
         return response
     
     _client_ip = _get_client_ip()
-    _extraction = extraction_progress_map[_client_ip]
+    
+    def _find_active_extraction():
+        """Cari user yg sedang extraction, atau fallback ke IP sendiri."""
+        for ip, p in extraction_progress_map.items():
+            if p['is_running']:
+                return ip, p
+        return _client_ip, extraction_progress_map[_client_ip]
     
     def generate():
         import math
         last_progress = None
         idle_loops = 0
+        active_ip, _extraction = _find_active_extraction()
         
         while True:
+            # Re-check active user setiap iterasi
+            new_ip, new_extraction = _find_active_extraction()
+            if new_ip != active_ip:
+                active_ip = new_ip
+                _extraction = new_extraction
+                last_progress = None  # force refresh
+            
             # global extraction_progress  (removed: IP-keyed access)
             
             current_progress = {
@@ -2775,16 +2789,29 @@ def screener_bb_progress():
         return response
     
     _client_ip = _get_client_ip()
-    _bb = bb_screener_progress_map[_client_ip]
+    
+    def _find_active_bb():
+        for ip, p in bb_screener_progress_map.items():
+            if p['is_running']:
+                return ip, p
+        return _client_ip, bb_screener_progress_map[_client_ip]
     
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
+        active_ip, _bb = _find_active_bb()
+        _connected_run_id = _bb["run_id"]
 
         # global bb_screener_progress  (removed: IP-keyed access)
-        _connected_run_id = _bb["run_id"]  # Capture run_id saat SSE connect
         while True:
+            # Re-check active user
+            new_ip, new_bb = _find_active_bb()
+            if new_ip != active_ip:
+                active_ip = new_ip
+                _bb = new_bb
+                _connected_run_id = _bb["run_id"]
+                last_progress = None
 
             current_progress = {
                 'status': _bb['status'],
@@ -3296,15 +3323,28 @@ def screener_basis_adx_progress():
         return response
     
     _client_ip = _get_client_ip()
-    _basis = basis_adx_screener_progress_map[_client_ip]
+    
+    def _find_active_basis():
+        for ip, p in basis_adx_screener_progress_map.items():
+            if p['is_running']:
+                return ip, p
+        return _client_ip, basis_adx_screener_progress_map[_client_ip]
     
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
+        active_ip, _basis = _find_active_basis()
+        _connected_run_id = _basis["run_id"]
         # global basis_adx_screener_progress  (removed: IP-keyed access)
-        _connected_run_id = _basis["run_id"]  # Capture run_id saat SSE connect
         while True:
+            # Re-check active user
+            new_ip, new_basis = _find_active_basis()
+            if new_ip != active_ip:
+                active_ip = new_ip
+                _basis = new_basis
+                _connected_run_id = _basis["run_id"]
+                last_progress = None
             current_progress = {
                 'status': _basis['status'],
                 'current_ticker': _basis['current_ticker'],
@@ -3511,15 +3551,27 @@ def screener_fundamental_progress():
         return response
     
     _client_ip = _get_client_ip()
-    _fund = fundamental_screener_progress_map[_client_ip]
+    
+    def _find_active_fund():
+        for ip, p in fundamental_screener_progress_map.items():
+            if p['is_running']:
+                return ip, p
+        return _client_ip, fundamental_screener_progress_map[_client_ip]
     
     def generate():
         last_progress = None
         idle_loops = 0
-        
-        # global fundamental_screener_progress  (removed: IP-keyed access)
+        active_ip, _fund = _find_active_fund()
         _connected_run_id = _fund["run_id"]
+        # global fundamental_screener_progress  (removed: IP-keyed access)
         while True:
+            # Re-check active user
+            new_ip, new_fund = _find_active_fund()
+            if new_ip != active_ip:
+                active_ip = new_ip
+                _fund = new_fund
+                _connected_run_id = _fund["run_id"]
+                last_progress = None
             
             current_progress = {
                 'status': _fund['status'],
