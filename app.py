@@ -2794,12 +2794,16 @@ def screener_bb_progress():
         for ip, p in bb_screener_progress_map.items():
             if p['is_running']:
                 return ip, p
+        for ip, p in bb_screener_progress_map.items():
+            if p['status'] == 'completed' and p['results']:
+                return ip, p
         return _client_ip, bb_screener_progress_map[_client_ip]
     
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
+        completed_wait_loops = 0
         active_ip, _bb = _find_active_bb()
         _connected_run_id = _bb["run_id"]
 
@@ -2823,10 +2827,11 @@ def screener_bb_progress():
                 'run_id': _bb['run_id'],
             }
 
-            # Cache hit: completed with results -> fresh, emit and break
+            # Cache hit: completed with results -> emit and break
             if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
-                # Cek apakah ini stale (dari run sebelumnya)
-                if _connected_run_id == current_progress.get("run_id", 0):
+                completed_wait_loops += 1
+                # Tunggu max ~1.5s untuk potential new run, lalu emit completed
+                if _connected_run_id == current_progress.get("run_id", 0) and completed_wait_loops <= 3:
                     time.sleep(0.5)
                     continue
                 if current_progress != last_progress:
@@ -3328,12 +3333,16 @@ def screener_basis_adx_progress():
         for ip, p in basis_adx_screener_progress_map.items():
             if p['is_running']:
                 return ip, p
+        for ip, p in basis_adx_screener_progress_map.items():
+            if p['status'] == 'completed' and p['results']:
+                return ip, p
         return _client_ip, basis_adx_screener_progress_map[_client_ip]
     
     def generate():
         last_progress = None
         idle_loops = 0
         max_idle_loops = 30
+        completed_wait_loops = 0
         active_ip, _basis = _find_active_basis()
         _connected_run_id = _basis["run_id"]
         # global basis_adx_screener_progress  (removed: IP-keyed access)
@@ -3355,9 +3364,9 @@ def screener_basis_adx_progress():
                 'run_id': _basis['run_id'],
             }
             if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
-                # Cek apakah ini stale (dari run sebelumnya)
-                if _connected_run_id == current_progress.get('run_id', 0):
-                    # Stale completed dari run sebelumnya. Tunggu POST handler reset.
+                completed_wait_loops += 1
+                # Tunggu max ~1.5s untuk potential new run, lalu emit completed
+                if _connected_run_id == current_progress.get('run_id', 0) and completed_wait_loops <= 3:
                     time.sleep(0.5)
                     continue
                 if current_progress != last_progress:
@@ -3556,6 +3565,9 @@ def screener_fundamental_progress():
         for ip, p in fundamental_screener_progress_map.items():
             if p['is_running']:
                 return ip, p
+        for ip, p in fundamental_screener_progress_map.items():
+            if p['status'] == 'completed' and p['results']:
+                return ip, p
         return _client_ip, fundamental_screener_progress_map[_client_ip]
     
     def generate():
@@ -3721,6 +3733,8 @@ def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb
         classification = 'SIDEWAYS'
         class_icon = chr(0x27a1) + chr(0xfe0f)
     
+    # ── Multi-window trend analysis ──
+    # Last 100 bars
     last100_start = max(start_idx, n - 100)
     last100_valid = 0
     last100_bull = 0
@@ -3741,6 +3755,55 @@ def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb
     last100_bull_pct = (last100_bull / last100_valid * 100) if last100_valid > 0 else 0
     last100_bear_pct = (last100_bear / last100_valid * 100) if last100_valid > 0 else 0
     
+    # Last 200 bars
+    last200_start = max(start_idx, n - 200)
+    last200_valid = 0
+    last200_bull = 0
+    last200_bear = 0
+    for i in range(last200_start, n):
+        if np.isnan(adx_series.iloc[i]) or np.isnan(sma20.iloc[i]):
+            continue
+        last200_valid += 1
+        close = float(data['Close'].iloc[i])
+        sma = float(sma20.iloc[i])
+        adx_val = float(adx_series.iloc[i])
+        if adx_val > 25:
+            if close > sma:
+                last200_bull += 1
+            else:
+                last200_bear += 1
+    
+    last200_bull_pct = (last200_bull / last200_valid * 100) if last200_valid > 0 else 0
+    last200_bear_pct = (last200_bear / last200_valid * 100) if last200_valid > 0 else 0
+    
+    # Interpretation helper
+    def trend_interpretation(bull_pct, bear_pct):
+        if bull_pct > 35:
+            return 'Strong Bullish', '#4ade80', chr(0x1f4c8)
+        elif bull_pct >= 25:
+            return 'Weak Bullish', '#a3e635', chr(0x2197) + chr(0xfe0f)
+        elif bear_pct > 35:
+            return 'Strong Bearish', '#f87171', chr(0x1f4c9)
+        elif bear_pct >= 25:
+            return 'Weak Bearish', '#fb923c', chr(0x2198) + chr(0xfe0f)
+        else:
+            return 'Sideways', '#fbbf24', chr(0x27a1) + chr(0xfe0f)
+    
+    total_class, total_color, total_icon = trend_interpretation(bull_pct, bear_pct)
+    if classification == 'STRONG BULLISH':
+        total_class = 'STRONG BULLISH'
+    elif classification == 'WEAK BULLISH':
+        total_class = 'WEAK BULLISH'
+    elif classification == 'STRONG BEARISH':
+        total_class = 'STRONG BEARISH'
+    elif classification == 'WEAK BEARISH':
+        total_class = 'WEAK BEARISH'
+    else:
+        total_class = 'SIDEWAYS'
+    
+    l100_class, l100_color, l100_icon = trend_interpretation(last100_bull_pct, last100_bear_pct)
+    l200_class, l200_color, l200_icon = trend_interpretation(last200_bull_pct, last200_bear_pct)
+    
     if last100_bull_pct > 35:
         last100_class = 'STRONG BULLISH'
     elif last100_bull_pct >= 30:
@@ -3752,24 +3815,44 @@ def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb
     else:
         last100_class = 'SIDEWAYS'
     
+    # Trend windows data
+    trend_windows = [
+        {
+            'label': 'Last 100 bars',
+            'bars': last100_valid,
+            'bull_pct': round(last100_bull_pct, 1),
+            'bear_pct': round(last100_bear_pct, 1),
+            'sideway_pct': round(100 - last100_bull_pct - last100_bear_pct, 1),
+            'classification': l100_class,
+            'color': l100_color,
+        },
+        {
+            'label': 'Last 200 bars',
+            'bars': last200_valid,
+            'bull_pct': round(last200_bull_pct, 1),
+            'bear_pct': round(last200_bear_pct, 1),
+            'sideway_pct': round(100 - last200_bull_pct - last200_bear_pct, 1),
+            'classification': l200_class,
+            'color': l200_color,
+        },
+        {
+            'label': f'All ({valid_bars} bars)',
+            'bars': valid_bars,
+            'bull_pct': round(bull_pct, 1),
+            'bear_pct': round(bear_pct, 1),
+            'sideway_pct': round(sideway_pct, 1),
+            'classification': total_class,
+            'color': total_color,
+        },
+    ]
+    
+    # Current status values
     last_close = float(data['Close'].iloc[-1])
     last_sma20 = float(sma20.iloc[-1])
     last_adx_val = float(adx_series.iloc[-1])
     last_pdi = float(pdi_series.iloc[-1])
     last_mdi = float(mdi_series.iloc[-1])
     sma20_dist = ((last_close / last_sma20) - 1) * 100
-    
-    bracket_display = []
-    for key in ['0_20', '20_25', '25_40', '40_999']:
-        b = adx_brackets[key]
-        if b['count'] > 0:
-            above_pct = (b['above_sma'] / b['count']) * 100
-            bracket_display.append({
-                'label': b['label'],
-                'count': b['count'],
-                'above_pct': round(above_pct, 1),
-                'below_pct': round(100 - above_pct, 1)
-            })
     
     return {
         'valid_bars': valid_bars,
@@ -3793,7 +3876,7 @@ def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb
             'pdi_above_mdi': last_pdi > last_mdi,
             'adx_above_25': last_adx_val > 25,
         },
-        'brackets': bracket_display,
+        'trend_windows': trend_windows,
     }
 
 def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb):
