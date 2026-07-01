@@ -2147,8 +2147,14 @@ def extract_us_stocks():
                 
                 # Create rate limit marker for next extraction
                 create_extraction_marker(uslist_path)
+            except Exception as e:
+                # Tangkap unexpected exception biar status direset
+                print(f"[EXTRACT/US] Thread crashed: {e}", flush=True)
+                _extraction['status'] = 'error'
+                _extraction['message'] = f'Extraction failed: {str(e)}'
             finally:
-                # Release data sync lock (even if thread crashes)
+                # Pastikan is_running direset & lock di-release
+                _extraction['is_running'] = False
                 release_data_sync_lock()
         
         thread = threading.Thread(target=run_us_extraction, daemon=True)
@@ -2276,8 +2282,14 @@ def extract_id_stocks():
                 
                 # Create rate limit marker for next extraction
                 create_extraction_marker(idlist_path)
+            except Exception as e:
+                # Tangkap unexpected exception biar status direset
+                print(f"[EXTRACT/ID] Thread crashed: {e}", flush=True)
+                _extraction['status'] = 'error'
+                _extraction['message'] = f'Extraction failed: {str(e)}'
             finally:
-                # Release data sync lock (even if thread crashes)
+                # Pastikan is_running direset & lock di-release
+                _extraction['is_running'] = False
                 release_data_sync_lock()
         
         thread = threading.Thread(target=run_id_extraction, daemon=True)
@@ -2545,7 +2557,12 @@ def run_bb_screener(list_path, list_type):
         
         _bb['status'] = 'completed'
         # Sort results by value in descending order
-        _bb['results'] = sorted(_bb['results'], key=lambda x: x.get('value', 0), reverse=True)
+        _bb['results'] = sorted(_bb['results'],
+            key=lambda x: (
+                {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}.get(x.get('recommendation', ''), 0),
+                x.get('adx_sma_pct', 0) or 0,
+                x.get('value', 0) or 0
+            ), reverse=True)
         _bb['message'] = f'BB Screener completed: {len(_bb["results"])} stocks analyzed'
         _bb['is_running'] = False
         log_action('screener_bb', 'run_bb_screener', params={'type': list_type}, status='success',
@@ -3000,7 +3017,12 @@ def run_basis_adx_screener(list_path, list_type):
             time.sleep(0.5)
         
         _basis['status'] = 'completed'
-        _basis['results'] = sorted(_basis['results'], key=lambda x: x.get('value', 0), reverse=True)
+        _basis['results'] = sorted(_basis['results'],
+            key=lambda x: (
+                {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}.get(x.get('recommendation', ''), 0),
+                x.get('adx_sma_pct', 0) or 0,
+                x.get('value', 0) or 0
+            ), reverse=True)
         _basis['message'] = f'Basis ADX Screener completed: {len(_basis["results"])} stocks analyzed'
         _basis['is_running'] = False
         log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='success',
@@ -3879,25 +3901,27 @@ def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb
         'trend_windows': trend_windows,
     }
 
-def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb):
+def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb, window=100):
     """
-    Hitung persentase bar di mana ADX > 20 AND Close > SMA20 (Basis).
-    Memberikan indikasi directional trend strength.
+    Hitung persentase bar di mana ADX > 25 AND Close > SMA20 (Basis)
+    dalam window bar terakhir (default: 100).
 
     Returns:
         (adx_sma_pct, trend_commentary)
     """
     valid_count = 0
     adx_sma_count = 0
+    n = len(data)
+    start = max(20, n - window)
 
-    for i in range(20, len(data)):  # mulai setelah SMA20 terisi
+    for i in range(start, n):
         if np.isnan(adx_series.iloc[i]):
             continue
         valid_count += 1
         close = float(data['Close'].iloc[i])
         sma20 = float(middle_bb.iloc[i])
         adx = float(adx_series.iloc[i])
-        if adx > 20 and close > sma20:
+        if adx > 25 and close > sma20:
             adx_sma_count += 1
 
     pct = (adx_sma_count / valid_count * 100) if valid_count > 0 else 0.0
