@@ -14,7 +14,13 @@ import xml.etree.ElementTree as ET
 import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from pygooglenews import GoogleNews
+try:
+    from pygooglenews import GoogleNews
+    _HAS_NEWS = True
+except ImportError:
+    GoogleNews = None
+    _HAS_NEWS = False
+    print("[INFO] pygooglenews not available — news feature disabled")
 from log_utils import log_action, _get_client_ip, read_recent_logs
 from collections import defaultdict
 
@@ -1382,7 +1388,10 @@ def fetch_related_news(ticker):
         
         for config in search_configs:
             try:
-                gn = GoogleNews(lang=config['lang'], country=config['country'])
+                if not _HAS_NEWS:
+                    news_response = {"status": "disabled", "articles": [], "message": "News module not installed"}
+                else:
+                    gn = GoogleNews(lang=config['lang'], country=config['country'])
                 # Gunakan method search() dengan parameter when='7d' untuk 7 hari terakhir
                 result = gn.search(clean_ticker, when='7d')
                 
