@@ -1070,7 +1070,28 @@ def calculate_adx(df, period=14):
 def index():
     """Halaman Landing Page"""
     log_action('landing_page', 'view')
-    return render_template('index.html', api_base_url=app.config['API_BASE_URL'])
+    # Baca template langsung — bypass Jinja cache
+    import os as _os
+    tpl_path = _os.path.join(app.root_path, 'templates', 'index.html')
+    with open(tpl_path, 'r', encoding='utf-8') as _f:
+        html = _f.read()
+    # Inject sort script langsung di HTML
+    sort_script = '''
+            // Sort results: BUY > HOLD LONG > SHORT SELL, then by trend% desc
+            const recOrder = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1};
+            data.sort((a, b) => {
+                const ra = recOrder[a.recommendation] || 0;
+                const rb = recOrder[b.recommendation] || 0;
+                if (ra !== rb) return rb - ra;
+                const ta = a.adx_sma_pct || 0;
+                const tb = b.adx_sma_pct || 0;
+                if (ta !== tb) return tb - ta;
+                return (b.value || 0) - (a.value || 0);
+            });
+'''
+    html = html.replace('data.forEach(stock => {', sort_script + '\n            data.forEach(stock => {')
+    from flask import Response
+    return Response(html, mimetype='text/html')
 
 @app.route('/refresh', methods=['POST', 'OPTIONS'])
 def refresh_data():
