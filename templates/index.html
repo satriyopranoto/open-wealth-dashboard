@@ -930,16 +930,22 @@
                 statusDiv.textContent = 'EXTRACTION IN PROGRESS...';
                 statusDiv.className = 'loading text-[#d4af37]';
                 
-                eventSource.onerror = function() {
-                    if (!hasCompleted) {
-                        statusDiv.textContent = 'CONNECTION LOST';
-                        statusDiv.className = 'error text-red-400';
-                    }
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
-                    }
-                };
+                // Update onerror handler (SSE mungkin sempat null karena idle → close)
+                if (eventSource) {
+                    eventSource.onerror = function() {
+                        if (!hasCompleted) {
+                            statusDiv.textContent = 'CONNECTION LOST';
+                            statusDiv.className = 'error text-red-400';
+                        }
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                    };
+                } else {
+                    // SSE sempat keganti null karena flush idle — reconnect otomatis dari browser
+                    console.log('SSE idle-flushed, waiting for auto-reconnect...');
+                }
                 
             } catch (error) {
                 statusDiv.textContent = 'EXTRACTION FAILED';
