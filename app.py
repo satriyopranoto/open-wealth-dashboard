@@ -3023,14 +3023,14 @@ def run_basis_adx_screener(list_path, list_type):
                 continue
             
             time.sleep(0.5)
-        
-        _basis['status'] = 'completed'
+
         _basis['results'] = sorted(_basis['results'],
             key=lambda x: (
                 {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}.get(x.get('recommendation', ''), 0),
                 x.get('adx_sma_pct', 0) or 0,
                 x.get('value', 0) or 0
             ), reverse=True)
+        _basis['status'] = 'completed'
         _basis['message'] = f'Basis ADX Screener completed: {len(_basis["results"])} stocks analyzed'
         _basis['is_running'] = False
         log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='success',
