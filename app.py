@@ -29,6 +29,10 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Force template auto-reload (disable caching)
+app.jinja_env.auto_reload = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
 # Enable CORS for all routes
 CORS(app, resources={r"/*": {"origins": "*"}})
 
