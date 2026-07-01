@@ -3262,7 +3262,15 @@ def screener_us_basis_adx():
     try:
         _basis['is_running'] = True
         run_basis_adx_screener(uslist_path, 'US')
+        # Urutkan hasil sebelum dikembalikan
+        rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
         if _basis['results']:
+            _basis['results'].sort(
+                key=lambda x: (
+                    rec_order.get(x.get('recommendation', ''), 0),
+                    x.get('adx_sma_pct', 0) or 0,
+                    x.get('value', 0) or 0
+                ), reverse=True)
             results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('us-basis-adx', results_df)
         touch_screener_marker('us-basis-adx')
@@ -3350,7 +3358,15 @@ def screener_id_basis_adx():
     try:
         _basis['is_running'] = True
         run_basis_adx_screener(idlist_path, 'ID')
+        # Urutkan hasil sebelum dikembalikan
+        rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
         if _basis['results']:
+            _basis['results'].sort(
+                key=lambda x: (
+                    rec_order.get(x.get('recommendation', ''), 0),
+                    x.get('adx_sma_pct', 0) or 0,
+                    x.get('value', 0) or 0
+                ), reverse=True)
             results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('id-basis-adx', results_df)
         touch_screener_marker('id-basis-adx')
