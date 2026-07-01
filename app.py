@@ -29,10 +29,6 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Force template auto-reload (disable caching)
-app.jinja_env.auto_reload = True
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-
 # Enable CORS for all routes
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -1070,14 +1066,7 @@ def calculate_adx(df, period=14):
 def index():
     """Halaman Landing Page"""
     log_action('landing_page', 'view')
-    # render_template dulu biar variabel Jinja tetap jalan
-    html = render_template('index.html', api_base_url=app.config['API_BASE_URL'])
-    # Inject sort script langsung — bypass Jinja cache issues
-    sort_script = '\n            // Sort: BUY > HOLD > SELL\n            const recOrder = {"BUY":3,"HOLD LONG":2,"SHORT SELL":1};\n            data.sort((a,b)=>{const ra=recOrder[a.recommendation]||0,rb=recOrder[b.recommendation]||0;if(ra!==rb)return rb-ra;const ta=a.adx_sma_pct||0,tb=b.adx_sma_pct||0;if(ta!==tb)return tb-ta;return(b.value||0)-(a.value||0)});\n'
-    if 'data.forEach(stock => {' in html:
-        html = html.replace('data.forEach(stock => {', sort_script + '            data.forEach(stock => {')
-    from flask import Response
-    return Response(html, mimetype='text/html')
+    return render_template('index.html', api_base_url=app.config['API_BASE_URL'])
 
 @app.route('/refresh', methods=['POST', 'OPTIONS'])
 def refresh_data():
