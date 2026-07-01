@@ -3725,9 +3725,8 @@ def view_logs():
 
 
 if __name__ == '__main__':
-    # Debug=True penting untuk melihat log di terminal
-    # threaded=True memastikan request datang bersamaan tidak menumpuk
-    app.run(debug=True, threaded=True, use_reloader=False)
+    # Gunakan host='0.0.0.0' agar bisa diakses dari device lain di jaringan
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
 
 
 def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb):
