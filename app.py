@@ -3233,8 +3233,17 @@ def screener_us_basis_adx():
             _basis['results'] = cached_data.to_dict('records')
             _basis['status'] = 'completed'
             _basis['progress'] = len(cached_data)
+            # Sort cached results by recommendation priority
+            rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
+            cached_records = cached_data.to_dict('records')
+            cached_records.sort(
+                key=lambda x: (
+                    rec_order.get(x.get('recommendation', ''), 0),
+                    x.get('adx_sma_pct', 0) or 0,
+                    x.get('value', 0) or 0
+                ), reverse=True)
             clean_records = []
-            for item in cached_data.to_dict('records'):
+            for item in cached_records:
                 cleaned = {}
                 for k, v in item.items():
                     if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
@@ -3243,7 +3252,7 @@ def screener_us_basis_adx():
                         cleaned[k] = v
                 clean_records.append(cleaned)
             return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
-    
+
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     if not os.path.exists(uslist_path):
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
@@ -3312,8 +3321,17 @@ def screener_id_basis_adx():
             _basis['results'] = cached_data.to_dict('records')
             _basis['status'] = 'completed'
             _basis['progress'] = len(cached_data)
+            # Sort cached results by recommendation priority
+            rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
+            cached_records = cached_data.to_dict('records')
+            cached_records.sort(
+                key=lambda x: (
+                    rec_order.get(x.get('recommendation', ''), 0),
+                    x.get('adx_sma_pct', 0) or 0,
+                    x.get('value', 0) or 0
+                ), reverse=True)
             clean_records = []
-            for item in cached_data.to_dict('records'):
+            for item in cached_records:
                 cleaned = {}
                 for k, v in item.items():
                     if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
