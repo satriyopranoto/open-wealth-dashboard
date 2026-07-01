@@ -1435,6 +1435,18 @@
                 `;
             }
             
+            // Sort results: BUY > HOLD LONG > SHORT SELL, then by trend% desc
+            const recOrder = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1};
+            data.sort((a, b) => {
+                const ra = recOrder[a.recommendation] || 0;
+                const rb = recOrder[b.recommendation] || 0;
+                if (ra !== rb) return rb - ra;
+                const ta = a.adx_sma_pct || 0;
+                const tb = b.adx_sma_pct || 0;
+                if (ta !== tb) return tb - ta;
+                return (b.value || 0) - (a.value || 0);
+            });
+            
             data.forEach(stock => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors';
