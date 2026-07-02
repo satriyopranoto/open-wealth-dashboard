@@ -2537,7 +2537,15 @@ def run_bb_screener(list_path, list_type):
                     recommendation = "SHORT SELL"
                 
                 # Calculate ADX+SMA% for trend strength
-                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                try:
+                    adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                except NameError:
+                    adx_sma_pct = 0
+                    trend_commentary = "N/A"
+                except Exception as e:
+                    print(f"Trend calc error for {ticker}: {e}")
+                    adx_sma_pct = 0
+                    trend_commentary = "N/A"
                 
                 result_item = {
                     'ticker': ticker,
@@ -2999,7 +3007,15 @@ def run_basis_adx_screener(list_path, list_type):
                     recommendation = "SHORT SELL"
                 
                 # Calculate ADX+SMA% for trend strength
-                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                try:
+                    adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                except NameError:
+                    adx_sma_pct = 0
+                    trend_commentary = "N/A"
+                except Exception as e:
+                    print(f"Trend calc error for {ticker}: {e}")
+                    adx_sma_pct = 0
+                    trend_commentary = "N/A"
                 
                 result_item = {
                     'ticker': ticker,
