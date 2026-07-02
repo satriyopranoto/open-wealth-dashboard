@@ -3729,11 +3729,6 @@ def view_logs():
                               error=str(e))
 
 
-if __name__ == '__main__':
-    # Gunakan host='0.0.0.0' agar bisa diakses dari device lain di jaringan
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
-
-
 def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb):
     """
     Trend Analysis menggunakan framework ADX(14) + SMA20.
@@ -3994,3 +3989,7 @@ def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb, w
         commentary = f"Sideways ({pct:.0f}%)"
 
     return round(pct, 1), commentary
+
+if __name__ == '__main__':
+    # Gunakan host='0.0.0.0' agar bisa diakses dari device lain di jaringan
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
