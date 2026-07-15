@@ -100,3 +100,31 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 **Root cause:** Bokeh's figure default is `y_axis_location="left"`.
 **Fix:** Add `y_axis_location="right"` to both `_make_base_figure()` calls in `bokeh_chart.py` (p1 and p2).
 **Key location:** `bokeh_chart.py` — `generate_chart()` → p1 and p2 figure creation.
+
+---
+
+### 8. Stop Loss (SL) Not Donchian
+
+**Symptom:** SL line on chart is a flat percentage below price (e.g. 2% of Close), not the Donchian Channel.
+**Root cause:** The `serve_chart_html` endpoint used `df_plot['Close'] * 0.98` instead of the EA's Donchian SL logic.
+**Fix:** Call `calculate_sl(df_plot)` from `app.py` (already exists) instead of the simplified calculation.
+**Key location:** `app.py` → `serve_chart_html()` — replace `sl_series = df_plot['Close'] * 0.98` with `sl_series = calculate_sl(df_plot)`.
+**Donchian logic** (`calculate_sl` in app.py):
+- Lookback period = `atr_multiple * atr_period` (default 2.8 × 10 = 28)
+- `r` = Highest High over lookback period (shifted by 1)
+- `s` = Lowest Low over lookback period (shifted by 1)
+- SL = `r` (for uptrend/Long) or `s` (for downtrend/Short)
+
+---
+
+### 9. Timeframe Selector (H1/H4/D1/W1/MN)
+
+**Feature:** Timeframe selector buttons below the chart — click to switch chart interval.
+**Backend:** `/chart_html/<ticker>?tf=1h` accepts timeframe parameter:
+- `1h` → 1-hour candles (30d), uses yfinance interval="1h"
+- `4h` → 4-hour candles (60d), resampled from 1h
+- `1d` → daily (400d), default
+- `1wk` → weekly (2y), interval="1wk"
+- `1mo` → monthly (10y), interval="1mo"
+**Frontend:** `templates/index.html` — `.tf-btn` buttons call `changeTimeframe(tf, btn)`.
+**Key locations:** `app.py` → `serve_chart_html()`, `templates/index.html` → `renderChart()` + `changeTimeframe()`.
