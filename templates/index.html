@@ -281,9 +281,9 @@
     <div id="bokeh-chart" class="w-full"></div>
     <div class="flex gap-2 mt-2 justify-end">
         <input type="hidden" id="chart-timeframe" value="1d">
-        <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm bg-[#d4af37]/30 text-[#d4af37] border border-[#d4af37]/20 transition-all hover:bg-[#d4af37]/40" onclick="changeTimeframe('1h', this)">H1</button>
+        <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm text-[#99907c] border border-[#d4af37]/10 transition-all hover:bg-[#d4af37]/20" onclick="changeTimeframe('1h', this)">H1</button>
         <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm text-[#99907c] border border-[#d4af37]/10 transition-all hover:bg-[#d4af37]/20" onclick="changeTimeframe('4h', this)">H4</button>
-        <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm text-[#99907c] border border-[#d4af37]/10 transition-all hover:bg-[#d4af37]/20" onclick="changeTimeframe('1d', this)">D1</button>
+        <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm bg-[#d4af37]/30 text-[#d4af37] border border-[#d4af37]/20 transition-all hover:bg-[#d4af37]/40" onclick="changeTimeframe('1d', this)">D1</button>
         <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm text-[#99907c] border border-[#d4af37]/10 transition-all hover:bg-[#d4af37]/20" onclick="changeTimeframe('1wk', this)">W1</button>
         <button class="tf-btn text-[10px] uppercase tracking-wider px-3 py-1 rounded-sm text-[#99907c] border border-[#d4af37]/10 transition-all hover:bg-[#d4af37]/20" onclick="changeTimeframe('1mo', this)">MN</button>
     </div>
@@ -1044,6 +1044,22 @@
             container.innerHTML = '<iframe id="chart-iframe" src="/chart_html/' + encodeURIComponent(ticker) + '?tf=' + tf + '" style="width:100%;height:620px;border:none;border-radius:4px;"></iframe>';
             document.querySelectorAll('.tf-btn').forEach(b => { b.classList.remove('bg-[#d4af37]/30', 'text-[#d4af37]'); b.classList.add('text-[#99907c]'); });
             if (btn) { btn.classList.remove('text-[#99907c]'); btn.classList.add('bg-[#d4af37]/30', 'text-[#d4af37]'); }
+            
+            // Update SL di Risk Management sesuai timeframe chart
+            console.log('ticker val:', ticker, 'tf val:', tf);
+            if (ticker) {
+                try {
+                    fetch('/sl?ticker=' + encodeURIComponent(ticker) + '&tf=' + tf)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.last_sl != null) {
+                                document.getElementById('calc-sl').textContent = data.last_sl.toFixed(2);
+                                if (typeof calculateLotSize === 'function') calculateLotSize();
+                            }
+                        })
+                        .catch(e => console.error('SL fetch error:', e));
+                } catch(e) { console.error('SL outer error:', e); }
+            } else { console.log('ticker empty, skipping SL fetch'); }
         }
 
         function renderTrendAnalysis(data) {
