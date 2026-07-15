@@ -39,8 +39,6 @@ def serve_assets(filename):
 RETRY_DELAY = 5
 MAX_RETRIES = 3
 
-bb_screener_progress_map = defaultdict(_default_bb_ip)
-
 def _default_basis_adx_ip():
     return {
         'is_running': False,
