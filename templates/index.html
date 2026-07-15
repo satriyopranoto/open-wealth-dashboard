@@ -854,13 +854,6 @@
 
         let eventSource = null;
 
-        async function loadScreener(type) {
-            } catch (error) {
-                statusDiv.textContent = 'EXTRACTION FAILED';
-                statusDiv.className = 'error text-red-400';
-            }
-        }
-
         async function analyzeStock() {
             const ticker = document.getElementById('ticker').value.toUpperCase();
             const statusDiv = document.getElementById('status');

@@ -308,6 +308,7 @@ def load_cached_fundamental_screener(screener_name):
         print(f"Error membaca cache fundamental screener: {str(e)}")
         return None, None, str(e)
 
+def load_cached_fundamental(ticker):
     """
     Memuat data fundamental dari cache jika ada dan masih valid (maksimal 1 hari)
     """
