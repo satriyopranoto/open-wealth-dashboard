@@ -1166,8 +1166,8 @@ def serve_chart_html(ticker):
         df_plot = df.copy()
         df_plot['idx'] = np.arange(len(df_plot))
         
-        # SL series (simplified - 2% below close)
-        sl_series = df_plot['Close'] * 0.98
+        # SL series — Donchian Channel (sama dengan logika EA)
+        sl_series = calculate_sl(df_plot)
         
         # Bollinger Bands
         sma20 = df_plot['Close'].rolling(20).mean()
