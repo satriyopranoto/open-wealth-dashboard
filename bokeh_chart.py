@@ -288,6 +288,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=400,
         title=f"Analisis Saham {ticker}",
         x_range=Range1d(-0.5, len(df) - 0.5),
+        y_axis_location="right",
         sizing_mode="stretch_width",
     )
     p1.yaxis.formatter = NumeralTickFormatter(format="$0,0.00")
@@ -356,6 +357,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=160,
         x_range=p1.x_range,
         x_axis_location="below",
+        y_axis_location="right",
         sizing_mode="stretch_width",
     )
     p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
