@@ -1304,6 +1304,66 @@ def analyze_stock():
                   detail=str(e), duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": f"Terjadi kesalahan internal: {str(e)}"}), 500
 
+
+@app.route('/sl', methods=['GET', 'OPTIONS'])
+def get_sl_for_timeframe():
+    """Return SL (Donchian) for a specific timeframe — lightweight, no cache."""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        return response
+    
+    ticker = (request.args.get('ticker') or '').strip().upper()
+    if not ticker:
+        return jsonify({"status": "error", "message": "ticker required"}), 400
+    
+    tf = request.args.get('tf', '1d')
+    tf_config = {
+        '1h':  {'period': '30d',  'interval': '1h'},
+        '4h':  {'period': '60d',  'interval': '1h'},
+        '1d':  {'period': '400d', 'interval': '1d'},
+        '1wk': {'period': '2y',   'interval': '1wk'},
+        '1mo': {'period': '10y',  'interval': '1mo'},
+    }
+    config = tf_config.get(tf, tf_config['1d'])
+    
+    try:
+        import yfinance as yf
+        import numpy as np
+        
+        stock = yf.Ticker(ticker)
+        df = stock.history(period=config['period'], interval=config['interval'])
+        
+        if df.empty:
+            return jsonify({"status": "error", "message": f"No data for {ticker}"}), 404
+        
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        
+        if tf == '4h' and len(df) > 0:
+            df = df.resample('4h').agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min',
+                'Close': 'last', 'Volume': 'sum'
+            }).dropna()
+        
+        df['idx'] = np.arange(len(df))
+        sl_series = calculate_sl(df)
+        last_sl = float(sl_series.iloc[-1]) if not sl_series.empty and not np.isnan(sl_series.iloc[-1]) else None
+        last_price = float(df['Close'].iloc[-1]) if not df.empty else None
+        
+        return jsonify({
+            "status": "success",
+            "ticker": ticker,
+            "tf": tf,
+            "last_sl": last_sl,
+            "last_price": last_price
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def fetch_related_news(ticker):
     """Fetch related news from Google News dengan multiple languages dan regions"""
     # Cache news per ticker selama 1 jam
