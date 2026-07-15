@@ -60,15 +60,17 @@ docker run ... --network stocktrade_default --network-alias app stocktrade-app:l
 - **Flask App** (`stocktrade-app-1`): Internal port `5000`. Must have network alias `app`.
 - **Network:** Both on `stocktrade_default`
 
-To rebuild and deploy:
+To rebuild and deploy from the Windows git clone:
 ```bash
-cp /c/Users/satri/code/stocktrade/app.py /c/Users/satri/stocktrade/app.py
-cp /c/Users/satri/code/stocktrade/index.html /c/Users/satri/stocktrade/templates/index.html
-cp /c/Users/satri/code/stocktrade/bokeh_chart.py /c/Users/satri/stocktrade/bokeh_chart.py
-cd /c/Users/satri/stocktrade
+# Clone is at C:\Users\satri\code\stocktrade — build directly from there
+cd /c/Users/satri/code/stocktrade
 docker build -t stocktrade-app:latest .
 docker stop stocktrade-app-1 && docker rm stocktrade-app-1
-docker run -d --name stocktrade-app-1 --restart unless-stopped --network stocktrade_default --network-alias app -v /c/Users/satri/stocktrade/cache:/app/cache -v /c/Users/satri/stocktrade/logs:/app/logs stocktrade-app:latest
+docker run -d --name stocktrade-app-1 --restart unless-stopped \
+  --network stocktrade_default --network-alias app \
+  -v /c/Users/satri/stocktrade/cache:/app/cache \
+  -v /c/Users/satri/stocktrade/logs:/app/logs \
+  stocktrade-app:latest
 ```
 
 ---
