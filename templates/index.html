@@ -514,6 +514,13 @@
         }
 
         async function loadScreener(type) {
+            if (screenerRunning) {
+                document.getElementById('status').textContent = 'SCREENER ALREADY RUNNING - Please wait';
+                document.getElementById('status').className = 'loading text-[#d4af37]';
+                return;
+            }
+            screenerRunning = true;
+            
             const statusDiv = document.getElementById('status');
             const resultArea = document.getElementById('result-area');
             const screenerResults = document.getElementById('screener-results');
@@ -638,6 +645,7 @@
                                     // Tab pertama — data sudah ada dari response POST
                                     statusDiv.textContent = `SCREENER COMPLETE: ${screenerData.count} stocks analyzed`;
                                     renderScreenerResults(titleText, screenerData.data);
+                                    screenerRunning = false;
                                 } else {
                                     // Tab kedua (monitor via 409) — fetch hasil via GET
                                     statusDiv.textContent = progress.status === 'completed' ? 'Fetching results...' : 'SCREENER FAILED';
@@ -650,6 +658,7 @@
                                                     statusDiv.className = 'success text-[#4ade80]';
                                                     extractionProgress.classList.add('hidden');
                                                     renderScreenerResults(titleText, data.data);
+                                                    screenerRunning = false;
                                                 } else {
                                                     setTimeout(retryFetch, 2000);
                                                 }
@@ -691,6 +700,7 @@
                             if (response.status === 429) {
                                 statusDiv.textContent = 'RATE LIMIT: ' + screenerData.message;
                                 statusDiv.className = 'error text-red-400';
+                                screenerRunning = false;
                                 if (eventSource === currentSource) {
                                     eventSource.close();
                                     eventSource = null;
@@ -699,11 +709,13 @@
                             } else if (response.status === 409) {
                                 statusDiv.textContent = 'SCREENER ALREADY RUNNING';
                                 statusDiv.className = 'loading text-[#d4af37]';
+                                screenerRunning = false;
                                 // Jangan close eventSource — biarkan live progress tetap update
                                 return;
                             } else {
                                 statusDiv.textContent = 'ERROR: ' + screenerData.message;
                                 statusDiv.className = 'error text-red-400';
+                                screenerRunning = false;
                                 if (eventSource === currentSource) {
                                     eventSource.close();
                                     eventSource = null;
@@ -849,10 +861,12 @@
             } catch (error) {
                 statusDiv.textContent = 'SCREENER CONNECTION FAILED';
                 statusDiv.className = 'error text-red-400';
+                screenerRunning = false;
             }
         }
 
         let eventSource = null;
+        let screenerRunning = false;
 
         async function analyzeStock() {
             const ticker = document.getElementById('ticker').value.toUpperCase();
