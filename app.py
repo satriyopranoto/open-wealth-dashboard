@@ -14,13 +14,7 @@ import xml.etree.ElementTree as ET
 import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-try:
-    from pygooglenews import GoogleNews
-    _HAS_NEWS = True
-except ImportError:
-    GoogleNews = None
-    _HAS_NEWS = False
-    print("[INFO] pygooglenews not available — news feature disabled")
+from pygooglenews import GoogleNews
 from log_utils import log_action, _get_client_ip, read_recent_logs
 from collections import defaultdict
 
@@ -87,6 +81,20 @@ def _default_basis_adx_ip():
 
 basis_adx_screener_progress_map = defaultdict(_default_basis_adx_ip)
 
+def _default_basis_adx_mt_ip():
+    return {
+        'is_running': False,
+        'current_ticker': '',
+        'progress': 0,
+        'total': 0,
+        'results': [],
+        'status': 'idle',
+        'message': '',
+        'run_id': 0
+    }
+
+basis_adx_mt_screener_progress_map = defaultdict(_default_basis_adx_mt_ip)
+
 def _default_fundamental_ip():
     return {
         'is_running': False,
@@ -142,9 +150,6 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
     return response
 
 def get_cache_file_path(ticker):
@@ -1120,7 +1125,73 @@ def refresh_data():
                   detail=str(e), duration_ms=duration)
         return jsonify({"status": "error", "message": f"Terjadi kesalahan saat refresh: {str(e)}"}), 500
 
-@app.route('/analyze', methods=['POST', 'OPTIONS'])
+@app.route('/chart_html/<ticker>', methods=['GET'])
+def serve_chart_html(ticker):
+    """Serve standalone Bokeh chart HTML for iframe embedding."""
+    from bokeh_chart import generate_chart
+    import yfinance as yf
+    import numpy as np
+    
+    try:
+        # Download data
+        stock = yf.Ticker(ticker)
+        df = stock.history(period="400d")
+        if df.empty:
+            return "<html><body><p style='color:red'>No data for " + ticker + "</p></body></html>", 404
+        
+        # Calculate required indicators
+        df_plot = df.copy()
+        df_plot['idx'] = np.arange(len(df_plot))
+        
+        # SL series (simplified - 2% below close)
+        sl_series = df_plot['Close'] * 0.98
+        
+        # Bollinger Bands
+        sma20 = df_plot['Close'].rolling(20).mean()
+        std20 = df_plot['Close'].rolling(20).std()
+        upper_bb = sma20 + 2 * std20
+        middle_bb = sma20
+        lower_bb = sma20 - 2 * std20
+        
+        # ADX calculation (simplified)
+        high = df_plot['High']
+        low = df_plot['Low']
+        close = df_plot['Close']
+        
+        tr = pd.DataFrame({
+            'hl': high - low,
+            'hc': (high - close.shift()).abs(),
+            'lc': (low - close.shift()).abs()
+        }).max(axis=1)
+        atr = tr.rolling(14).mean()
+        
+        up = high - high.shift()
+        dn = low.shift() - low
+        
+        pos_dm = up.where((up > dn) & (up > 0), 0)
+        neg_dm = dn.where((dn > up) & (dn > 0), 0)
+        
+        pdi = 100 * pos_dm.rolling(14).mean() / atr
+        mdi = 100 * neg_dm.rolling(14).mean() / atr
+        dx = 100 * (pdi - mdi).abs() / (pdi + mdi)
+        adx = dx.rolling(14).mean()
+        
+        adx_series = adx.fillna(0)
+        pdi_series = pdi.fillna(0)
+        mdi_series = mdi.fillna(0)
+        
+        # Generate chart — returns (script='', html=standalone_page)
+        _, chart_html = generate_chart(
+            ticker, df_plot, sl_series,
+            upper_bb, middle_bb, lower_bb,
+            adx_series, pdi_series, mdi_series
+        )
+        
+        return chart_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+    except Exception as e:
+        return f"<html><body><p style='color:red'>Error: {str(e)}</p></body></html>", 500
+
+@app.route('/analyze', methods=['GET', 'POST', 'OPTIONS'])
 def analyze_stock():
     """
     Endpoint utama untuk menerima request, mendownload data, 
@@ -1134,8 +1205,8 @@ def analyze_stock():
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
-    ticker = request.form.get('ticker', '').strip().upper()
-    force_refresh = request.form.get('force_refresh', 'false').lower() == 'true'
+    ticker = request.args.get('ticker') or request.form.get('ticker', '').strip().upper()
+    force_refresh = request.args.get('force_refresh', request.form.get('force_refresh', 'false')).lower() == 'true'
     
     log_action('analyze', 'analyze_stock', params={'ticker': ticker, 'force_refresh': force_refresh})
     start_time = time.time()
@@ -1282,12 +1353,9 @@ def analyze_stock():
         
         # ADX sudah dihitung di atas untuk rekomendasi
         
-        # ── Bokeh Interactive Chart ──
-        chart_script, chart_div = generate_chart(
-            ticker, df_plot, sl_series,
-            upper_bb, middle_bb, lower_bb,
-            adx_series, pdi_series, mdi_series,
-        )
+        # ── Bokeh Interactive Chart ── (via iframe, not inline)
+        chart_div = ''
+        chart_script = ''
         
         # 5. Download Data Fundamental
         fundamental_data, fundamental_error = download_fundamental_data(ticker, force_refresh=force_refresh)
@@ -1311,43 +1379,38 @@ def analyze_stock():
         duration = (time.time() - start_time) * 1000
         log_action('analyze', 'analyze_stock', params={'ticker': ticker, 'force_refresh': force_refresh},
                   status='success', duration_ms=duration)
-        return jsonify({
+        # Tambahkan fungsi helper untuk sanitasi NaN dari JSON response
+        def clean_nan(obj):
+            import math
+            if isinstance(obj, dict):
+                return {k: clean_nan(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_nan(x) for x in obj]
+            elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+                return None
+            return obj
+        
+        import math
+        
+        result = {
             "status": "success",
             "ticker": ticker,
-            "rsi": float(last_rsi),
+            "rsi": None if last_rsi is None or (isinstance(last_rsi, float) and math.isnan(last_rsi)) else float(last_rsi),
             "recommendation": recommendation,
-            "last_price": float(last_price),
+            "last_price": float(last_price) if not math.isnan(last_price) else None,
             "date": str(current_date),
             "chart_div": chart_div,
             "chart_script": chart_script,
-            "last_sl": float(last_sl), # Tambahkan ini
+            "last_sl": float(last_sl) if not math.isnan(last_sl) else None,
             "adx": float(adx_series.iloc[-1]) if not np.isnan(float(adx_series.iloc[-1])) else None,
             "pdi": float(pdi_series.iloc[-1]) if not np.isnan(float(pdi_series.iloc[-1])) else None,
             "mdi": float(mdi_series.iloc[-1]) if not np.isnan(float(mdi_series.iloc[-1])) else None,
-            "cache_timestamp": cache_timestamp, # Tambahkan timestamp cache
-            "news": news_items, # Tambahkan related news
-            "trend_analysis": trend_analysis, # Trend ADX+SMA20 analysis
-            "fundamental": {
-                "net_profit_margin": fundamental_data.get('net_profit_margin'),
-                "operating_margin": fundamental_data.get('operating_margin'),
-                "free_cash_flow": fundamental_data.get('free_cash_flow'),
-                "operating_cash_flow": fundamental_data.get('operating_cash_flow'),
-                "payout_ratio": fundamental_data.get('payout_ratio'),
-                "long_term_debt_to_equity": fundamental_data.get('long_term_debt_to_equity'),
-                "return_on_assets": fundamental_data.get('return_on_assets'),
-                "return_on_equity": fundamental_data.get('return_on_equity'),
-                "revenue_growth": fundamental_data.get('revenue_growth'),
-                "eps_growth": fundamental_data.get('eps_growth'),
-                "trailing_pe": fundamental_data.get('trailing_pe'),
-                "peg_ratio": fundamental_data.get('peg_ratio'),
-                "fair_price_pe": fundamental_data.get('fair_price_pe'),
-                "fair_price_dcf": fundamental_data.get('fair_price_dcf'),
-                "company_description": fundamental_data.get('company_description'),
-                "major_holders": fundamental_data.get('major_holders', []),
-                "institutional_holders": fundamental_data.get('institutional_holders', []),
-                "events": fundamental_data.get('events', {'earnings': [], 'dividends': [], 'splits': []})
-            }
-        })
+            "cache_timestamp": cache_timestamp,
+            "news": news_items,
+            "fundamental": fundamental_data,
+            "trend_analysis": trend_analysis
+        }
+        return jsonify(clean_nan(result))
 
     except Exception as e:
         # Pastikan error message ditampilkan dengan benar
@@ -1391,8 +1454,6 @@ def fetch_related_news(ticker):
         
         for config in search_configs:
             try:
-                if not _HAS_NEWS:
-                    break
                 gn = GoogleNews(lang=config['lang'], country=config['country'])
                 # Gunakan method search() dengan parameter when='7d' untuk 7 hari terakhir
                 result = gn.search(clean_ticker, when='7d')
@@ -2349,9 +2410,10 @@ def extract_progress():
         return _client_ip, extraction_progress_map[_client_ip]
     
     def generate():
-        import math
         last_progress = None
         idle_loops = 0
+        max_idle_loops = 30  # 30 detik idle timeout
+        completed_wait_loops = 0
         active_ip, _extraction = _find_active_extraction()
         
         while True:
@@ -2361,8 +2423,6 @@ def extract_progress():
                 active_ip = new_ip
                 _extraction = new_extraction
                 last_progress = None  # force refresh
-            
-            # global extraction_progress  (removed: IP-keyed access)
             
             current_progress = {
                 'status': _extraction['status'],
@@ -2374,12 +2434,37 @@ def extract_progress():
                 'message': _extraction['message']
             }
             
+            # Completed: kasih waktu biar frontend process hasilnya
+            if current_progress['status'] == 'completed':
+                completed_wait_loops += 1
+                # Tunggu max ~1.5s untuk pastiin frontend dapet event completed
+                if completed_wait_loops <= 3:
+                    if current_progress != last_progress:
+                        last_progress = current_progress.copy()
+                        yield f"data: {json.dumps(current_progress)}\n\n"
+                    time.sleep(0.5)
+                    continue
+                # After wait, yield sekali lagi lalu break
+                if current_progress != last_progress:
+                    yield f"data: {json.dumps(current_progress)}\n\n"
+                break
+            
+            # Idle: jangan break langsung, tunggu beberapa detik
+            if current_progress['status'] == 'idle':
+                idle_loops += 1
+                if idle_loops >= max_idle_loops:
+                    break
+                # Yield state idle sekali di awal
+                if idle_loops == 1:
+                    yield f"data: {json.dumps(current_progress)}\n\n"
+                time.sleep(1)
+                continue
+            
             if current_progress != last_progress:
                 last_progress = current_progress.copy()
-                
                 yield f"data: {json.dumps(current_progress)}\n\n"
             
-            if _extraction['status'] in ['completed', 'error', 'idle']:
+            if current_progress['status'] in ['error']:
                 break
             
             time.sleep(1)
@@ -2537,15 +2622,7 @@ def run_bb_screener(list_path, list_type):
                     recommendation = "SHORT SELL"
                 
                 # Calculate ADX+SMA% for trend strength
-                try:
-                    adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
-                except NameError:
-                    adx_sma_pct = 0
-                    trend_commentary = "N/A"
-                except Exception as e:
-                    print(f"Trend calc error for {ticker}: {e}")
-                    adx_sma_pct = 0
-                    trend_commentary = "N/A"
+                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
                 
                 result_item = {
                     'ticker': ticker,
@@ -3007,15 +3084,7 @@ def run_basis_adx_screener(list_path, list_type):
                     recommendation = "SHORT SELL"
                 
                 # Calculate ADX+SMA% for trend strength
-                try:
-                    adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
-                except NameError:
-                    adx_sma_pct = 0
-                    trend_commentary = "N/A"
-                except Exception as e:
-                    print(f"Trend calc error for {ticker}: {e}")
-                    adx_sma_pct = 0
-                    trend_commentary = "N/A"
+                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
                 
                 result_item = {
                     'ticker': ticker,
@@ -3042,14 +3111,14 @@ def run_basis_adx_screener(list_path, list_type):
                 continue
             
             time.sleep(0.5)
-
+        
+        _basis['status'] = 'completed'
         _basis['results'] = sorted(_basis['results'],
             key=lambda x: (
                 {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}.get(x.get('recommendation', ''), 0),
                 x.get('adx_sma_pct', 0) or 0,
                 x.get('value', 0) or 0
             ), reverse=True)
-        _basis['status'] = 'completed'
         _basis['message'] = f'Basis ADX Screener completed: {len(_basis["results"])} stocks analyzed'
         _basis['is_running'] = False
         log_action('screener_basis_adx', 'run_basis_adx_screener', params={'type': list_type}, status='success',
@@ -3252,17 +3321,8 @@ def screener_us_basis_adx():
             _basis['results'] = cached_data.to_dict('records')
             _basis['status'] = 'completed'
             _basis['progress'] = len(cached_data)
-            # Sort cached results by recommendation priority
-            rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
-            cached_records = cached_data.to_dict('records')
-            cached_records.sort(
-                key=lambda x: (
-                    rec_order.get(x.get('recommendation', ''), 0),
-                    x.get('adx_sma_pct', 0) or 0,
-                    x.get('value', 0) or 0
-                ), reverse=True)
             clean_records = []
-            for item in cached_records:
+            for item in cached_data.to_dict('records'):
                 cleaned = {}
                 for k, v in item.items():
                     if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
@@ -3271,7 +3331,7 @@ def screener_us_basis_adx():
                         cleaned[k] = v
                 clean_records.append(cleaned)
             return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
-
+    
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     if not os.path.exists(uslist_path):
         log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
@@ -3281,15 +3341,7 @@ def screener_us_basis_adx():
     try:
         _basis['is_running'] = True
         run_basis_adx_screener(uslist_path, 'US')
-        # Urutkan hasil sebelum dikembalikan
-        rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
         if _basis['results']:
-            _basis['results'].sort(
-                key=lambda x: (
-                    rec_order.get(x.get('recommendation', ''), 0),
-                    x.get('adx_sma_pct', 0) or 0,
-                    x.get('value', 0) or 0
-                ), reverse=True)
             results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('us-basis-adx', results_df)
         touch_screener_marker('us-basis-adx')
@@ -3348,17 +3400,8 @@ def screener_id_basis_adx():
             _basis['results'] = cached_data.to_dict('records')
             _basis['status'] = 'completed'
             _basis['progress'] = len(cached_data)
-            # Sort cached results by recommendation priority
-            rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
-            cached_records = cached_data.to_dict('records')
-            cached_records.sort(
-                key=lambda x: (
-                    rec_order.get(x.get('recommendation', ''), 0),
-                    x.get('adx_sma_pct', 0) or 0,
-                    x.get('value', 0) or 0
-                ), reverse=True)
             clean_records = []
-            for item in cached_records:
+            for item in cached_data.to_dict('records'):
                 cleaned = {}
                 for k, v in item.items():
                     if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
@@ -3377,15 +3420,7 @@ def screener_id_basis_adx():
     try:
         _basis['is_running'] = True
         run_basis_adx_screener(idlist_path, 'ID')
-        # Urutkan hasil sebelum dikembalikan
-        rec_order = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}
         if _basis['results']:
-            _basis['results'].sort(
-                key=lambda x: (
-                    rec_order.get(x.get('recommendation', ''), 0),
-                    x.get('adx_sma_pct', 0) or 0,
-                    x.get('value', 0) or 0
-                ), reverse=True)
             results_df = pd.DataFrame(_basis['results'])
             save_screener_to_cache('id-basis-adx', results_df)
         touch_screener_marker('id-basis-adx')
@@ -3729,6 +3764,12 @@ def view_logs():
                               error=str(e))
 
 
+if __name__ == '__main__':
+    # Debug=True penting untuk melihat log di terminal
+    # threaded=True memastikan request datang bersamaan tidak menumpuk
+    app.run(debug=True, threaded=True, use_reloader=False)
+
+
 def calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb):
     """
     Trend Analysis menggunakan framework ADX(14) + SMA20.
@@ -3990,6 +4031,432 @@ def calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb, w
 
     return round(pct, 1), commentary
 
-if __name__ == '__main__':
-    # Gunakan host='0.0.0.0' agar bisa diakses dari device lain di jaringan
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
+
+# ============================================================
+# BASIS ADX MULTI-TF MODERAT — H1 + Daily DI
+# ============================================================
+
+def calculate_daily_di_from_h1(h1_data):
+    """
+    Resample H1 data to daily and calculate +DI/-DI (DMI 14)
+    
+    Returns:
+        (last_daily_pdi, last_daily_mdi) — scalar float or (nan, nan)
+    """
+    if h1_data is None or len(h1_data) < 30:
+        return np.nan, np.nan
+    
+    # Resample H1 -> Daily
+    daily = pd.DataFrame()
+    daily['High'] = h1_data['High'].resample('D').max()
+    daily['Low'] = h1_data['Low'].resample('D').min()
+    daily['Close'] = h1_data['Close'].resample('D').last()
+    daily = daily.dropna(subset=['Close'])
+    
+    if len(daily) < 20:
+        return np.nan, np.nan
+    
+    _, dp, dm = calculate_adx(daily, period=14)
+    
+    if len(dp) < 1 or np.isnan(dp.iloc[-1]) or np.isnan(dm.iloc[-1]):
+        return np.nan, np.nan
+    
+    return float(dp.iloc[-1]), float(dm.iloc[-1])
+
+
+def download_h1_data(ticker, period="60d"):
+    """Download H1 data from Yahoo Finance. Returns dataframe or None."""
+    try:
+        data = yf.download(ticker, period=period, interval="1h", progress=False)
+        if data is None or data.empty or len(data) < 30:
+            return None
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+        return data
+    except Exception:
+        return None
+
+
+def run_basis_adx_multitf_screener(list_path, list_type):
+    """
+    Helper function untuk menjalankan Basis ADX Multi-TF Moderat screener
+    Data source: H1 (60d) + Daily DI (resampled from H1)
+    
+    Entry conditions (BUY):
+      - Low > Donchian SL
+      - Close > Basis (SMA20)
+      - ADX > 20
+      - PDI > MDI
+      - PDI > PDI[5] (rising)
+      - Daily PDI > Daily MDI (Multi-TF Moderat)
+    """
+    log_action('screener_basis_adx_mt', 'run_basis_adx_multitf_screener', params={'type': list_type})
+    screener_start = time.time()
+    _client_ip = _get_client_ip()
+    _basis_mt = basis_adx_mt_screener_progress_map[_client_ip]
+    
+    try:
+        tickers_df = pd.read_csv(list_path)
+        if 'Symbol' not in tickers_df.columns:
+            _basis_mt['status'] = 'error'
+            _basis_mt['message'] = "Kolom 'Symbol' tidak ditemukan"
+            return
+        
+        tickers = tickers_df['Symbol'].tolist()
+        
+        _basis_mt['is_running'] = True
+        _basis_mt['total'] = len(tickers)
+        _basis_mt['progress'] = 0
+        _basis_mt['results'] = []
+        _basis_mt['status'] = 'running'
+        _basis_mt['message'] = f'Starting Basis ADX MT Screener for {list_type} ({len(tickers)} tickers)...'
+        
+        for i, ticker in enumerate(tickers):
+            ticker = ticker.strip().upper()
+            _basis_mt['current_ticker'] = ticker
+            _basis_mt['progress'] = i + 1
+            _basis_mt['message'] = f'Analyzing {ticker} (H1)...'
+            
+            try:
+                # 1. Download H1 data
+                data = download_h1_data(ticker, period="60d")
+                if data is None:
+                    _basis_mt['message'] = f'{ticker}: No H1 data'
+                    continue
+                
+                numeric_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+                for col in numeric_cols:
+                    if col in data.columns:
+                        data[col] = pd.to_numeric(data[col], errors='coerce')
+                
+                data = data.dropna(subset=['Close'])
+                if len(data) < 60:
+                    _basis_mt['message'] = f'{ticker}: Insufficient H1 data'
+                    continue
+                
+                # 2. Calculate H1 indicators
+                sl_series = calculate_sl(data)
+                upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+                adx_series, pdi_series, mdi_series = calculate_adx(data)
+                
+                last_price = float(data['Close'].iloc[-1])
+                last_low = float(data['Low'].iloc[-1])
+                last_sl = float(sl_series.iloc[-1])
+                last_basis = float(middle_bb.iloc[-1])
+                last_volume = float(data['Volume'].iloc[-1]) if 'Volume' in data.columns else 0
+                
+                if np.isnan(last_sl) or np.isnan(last_basis):
+                    _basis_mt['message'] = f'{ticker}: Invalid SL or Basis data'
+                    continue
+                
+                yesterday_close = float(data['Close'].iloc[-2]) if len(data) >= 2 else last_price
+                change_pct = ((last_price - yesterday_close) / yesterday_close * 100) if yesterday_close != 0 else 0
+                value_in_millions = (last_price * last_volume) / 1_000_000
+                last_date = data.index[-1].strftime('%Y-%m-%d %H:%M')
+                
+                # H1 ADX values
+                last_adx = float(adx_series.iloc[-1])
+                last_pdi = float(pdi_series.iloc[-1])
+                last_mdi = float(mdi_series.iloc[-1])
+                pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+                adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+                
+                pdi_rising = last_pdi > pdi_5ago
+                pdi_above_mdi = last_pdi > last_mdi
+                adx_strong = last_adx > 20
+                adx_rising = last_adx > adx_5ago
+                is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
+                
+                # 3. Calculate Daily DI from H1 resample
+                d_pdi, d_mdi = calculate_daily_di_from_h1(data)
+                daily_mt_ok = (not np.isnan(d_pdi) and not np.isnan(d_mdi) and d_pdi > d_mdi)
+                
+                # 4. Determine recommendation with Multi-TF filter
+                if last_low > last_sl and last_price > last_basis:
+                    if (not is_nan
+                            and pdi_above_mdi and adx_strong and pdi_rising and adx_rising
+                            and daily_mt_ok):
+                        recommendation = "BUY"
+                    else:
+                        recommendation = "HOLD LONG"
+                elif last_price > last_sl:
+                    recommendation = "HOLD LONG"
+                else:
+                    recommendation = "SHORT SELL"
+                
+                adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+                
+                result_item = {
+                    'ticker': ticker,
+                    'last_date': last_date,
+                    'price': round(last_price, 2),
+                    'basis': round(last_basis, 2),
+                    'change_pct': round(change_pct, 2),
+                    'volume': float(last_volume),
+                    'value': round(value_in_millions, 2),
+                    'recommendation': recommendation,
+                    'adx': round(float(adx_series.iloc[-1]), 2) if not np.isnan(float(adx_series.iloc[-1])) else None,
+                    'pdi': round(float(pdi_series.iloc[-1]), 2) if not np.isnan(float(pdi_series.iloc[-1])) else None,
+                    'mdi': round(float(mdi_series.iloc[-1]), 2) if not np.isnan(float(mdi_series.iloc[-1])) else None,
+                    'd_pdi': round(d_pdi, 2) if not np.isnan(d_pdi) else None,
+                    'd_mdi': round(d_mdi, 2) if not np.isnan(d_mdi) else None,
+                    'adx_sma_pct': adx_sma_pct,
+                    'trend_commentary': trend_commentary
+                }
+                
+                _basis_mt['results'].append(result_item)
+                _basis_mt['message'] = f'{ticker}: {recommendation}'
+                
+            except Exception as e:
+                print(f"Error analyzing {ticker} (MT): {e}")
+                _basis_mt['message'] = f'{ticker}: Error'
+                continue
+            
+            time.sleep(0.5)
+        
+        _basis_mt['status'] = 'completed'
+        _basis_mt['results'] = sorted(_basis_mt['results'],
+            key=lambda x: (
+                {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1}.get(x.get('recommendation', ''), 0),
+                x.get('adx_sma_pct', 0) or 0,
+                x.get('value', 0) or 0
+            ), reverse=True)
+        _basis_mt['message'] = f'Basis ADX MT Screener completed: {len(_basis_mt["results"])} stocks analyzed'
+        _basis_mt['is_running'] = False
+        log_action('screener_basis_adx_mt', 'run_basis_adx_multitf_screener', params={'type': list_type}, status='success',
+                  detail=f'{len(_basis_mt["results"])} stocks analyzed')
+        
+    except Exception as e:
+        _basis_mt['status'] = 'error'
+        _basis_mt['message'] = str(e)
+        _basis_mt['is_running'] = False
+        log_action('screener_basis_adx_mt', 'run_basis_adx_multitf_screener', params={'type': list_type}, status='error',
+                  detail=str(e))
+
+
+# ─── US Basis ADX MT ───
+
+@app.route('/screener/us-basis-adx-mt', methods=['GET', 'POST', 'OPTIONS'])
+def screener_us_basis_adx_mt():
+    """Endpoint untuk mendapatkan data screener US Basis ADX Multi-TF"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'})
+    start_time = time.time()
+    
+    _client_ip = _get_client_ip()
+    _basis_mt = basis_adx_mt_screener_progress_map[_client_ip]
+    
+    if _basis_mt['is_running']:
+        log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Basis ADX MT Screener sedang berjalan"}), 409
+    
+    _basis_mt['status'] = 'starting'
+    _basis_mt['current_ticker'] = ''
+    _basis_mt['progress'] = 0
+    _basis_mt['total'] = 0
+    _basis_mt['results'] = []
+    _basis_mt['message'] = 'Initializing...'
+    _basis_mt['is_running'] = False
+    _basis_mt["run_id"] += 1  # Track new run
+    
+    # Load dari cache kalo ada (gak perlu extraction marker — pake H1 sendiri)
+    cached_data, metadata, error = load_cached_screener('us-basis-adx-mt')
+    if cached_data is not None:
+        log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
+        _basis_mt['results'] = cached_data.to_dict('records')
+        _basis_mt['status'] = 'completed'
+        _basis_mt['progress'] = len(cached_data)
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    
+    uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
+    if not os.path.exists(uslist_path):
+        log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'}, status='error',
+                  detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
+    
+    try:
+        _basis_mt['is_running'] = True
+        run_basis_adx_multitf_screener(uslist_path, 'US')
+        if _basis_mt['results']:
+            results_df = pd.DataFrame(_basis_mt['results'])
+            save_screener_to_cache('us-basis-adx-mt', results_df)
+        touch_screener_marker('us-basis-adx-mt')
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'}, status='success',
+                  detail=f'{len(_basis_mt["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": _basis_mt['message'],
+            "count": len(_basis_mt['results']), "data": _basis_mt['results']})
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx_mt', 'us_basis_adx_mt', params={'market': 'US'}, status='error', detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─── ID Basis ADX MT ───
+
+@app.route('/screener/id-basis-adx-mt', methods=['GET', 'POST', 'OPTIONS'])
+def screener_id_basis_adx_mt():
+    """Endpoint untuk mendapatkan data screener ID Basis ADX Multi-TF"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    
+    log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'})
+    start_time = time.time()
+    
+    _client_ip = _get_client_ip()
+    _basis_mt = basis_adx_mt_screener_progress_map[_client_ip]
+    
+    if _basis_mt['is_running']:
+        log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'}, status='error',
+                  detail='Already running', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "Basis ADX MT Screener sedang berjalan"}), 409
+    
+    _basis_mt['status'] = 'starting'
+    _basis_mt['current_ticker'] = ''
+    _basis_mt['progress'] = 0
+    _basis_mt['total'] = 0
+    _basis_mt['results'] = []
+    _basis_mt['message'] = 'Initializing...'
+    _basis_mt['is_running'] = False
+    _basis_mt["run_id"] += 1
+    
+    # Load dari cache kalo ada (gak perlu extraction marker)
+    cached_data, metadata, error = load_cached_screener('id-basis-adx-mt')
+    if cached_data is not None:
+        log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
+        _basis_mt['results'] = cached_data.to_dict('records')
+        _basis_mt['status'] = 'completed'
+        _basis_mt['progress'] = len(cached_data)
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    
+    idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
+    if not os.path.exists(idlist_path):
+        log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'}, status='error',
+                  detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
+        return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
+    
+    try:
+        _basis_mt['is_running'] = True
+        run_basis_adx_multitf_screener(idlist_path, 'ID')
+        if _basis_mt['results']:
+            results_df = pd.DataFrame(_basis_mt['results'])
+            save_screener_to_cache('id-basis-adx-mt', results_df)
+        touch_screener_marker('id-basis-adx-mt')
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'}, status='success',
+                  detail=f'{len(_basis_mt["results"])} results', duration_ms=duration)
+        return jsonify({"status": "success", "message": _basis_mt['message'],
+            "count": len(_basis_mt['results']), "data": _basis_mt['results']})
+    except Exception as e:
+        duration = (time.time() - start_time) * 1000
+        log_action('screener_basis_adx_mt', 'id_basis_adx_mt', params={'market': 'ID'}, status='error', detail=str(e), duration_ms=duration)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─── Basis ADX MT Progress SSE ───
+
+@app.route('/screener/basis-adx-mt-progress', methods=['GET', 'OPTIONS'])
+def screener_basis_adx_mt_progress():
+    """SSE endpoint untuk real-time progress Basis ADX MT screener"""
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        return response
+    
+    _client_ip = _get_client_ip()
+    
+    def _find_active_basis_mt():
+        for ip, p in basis_adx_mt_screener_progress_map.items():
+            if p['is_running']:
+                return ip, p
+        for ip, p in basis_adx_mt_screener_progress_map.items():
+            if p['status'] == 'completed' and p['results']:
+                return ip, p
+        return _client_ip, basis_adx_mt_screener_progress_map[_client_ip]
+    
+    def generate():
+        last_progress = None
+        idle_loops = 0
+        max_idle_loops = 30
+        completed_wait_loops = 0
+        active_ip, _basis_mt = _find_active_basis_mt()
+        _connected_run_id = _basis_mt["run_id"]
+        while True:
+            new_ip, new_basis_mt = _find_active_basis_mt()
+            if new_ip != active_ip:
+                active_ip = new_ip
+                _basis_mt = new_basis_mt
+                _connected_run_id = _basis_mt["run_id"]
+                last_progress = None
+            current_progress = {
+                'status': _basis_mt['status'],
+                'current_ticker': _basis_mt['current_ticker'],
+                'progress': _basis_mt['progress'],
+                'total': _basis_mt['total'],
+                'results_count': len(_basis_mt['results']),
+                'message': _basis_mt['message'],
+                'run_id': _basis_mt['run_id'],
+            }
+            if current_progress['status'] == 'completed' and current_progress['results_count'] > 0:
+                completed_wait_loops += 1
+                if _connected_run_id == current_progress.get('run_id', 0) and completed_wait_loops <= 3:
+                    time.sleep(0.5)
+                    continue
+                if current_progress != last_progress:
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                break
+            if current_progress['status'] == 'starting' and current_progress['results_count'] == 0:
+                if current_progress != last_progress:
+                    last_progress = current_progress.copy()
+                    yield "data: " + json.dumps(current_progress) + "\n\n"
+                time.sleep(1)
+                continue
+            if current_progress['status'] == 'idle':
+                idle_loops += 1
+                if idle_loops >= max_idle_loops:
+                    break
+                last_progress = current_progress.copy()
+                time.sleep(1)
+                continue
+            if current_progress != last_progress:
+                last_progress = current_progress.copy()
+                yield "data: " + json.dumps(current_progress) + "\n\n"
+            if current_progress['status'] in ['completed', 'error']:
+                break
+            time.sleep(1)
+    
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')

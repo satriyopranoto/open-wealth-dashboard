@@ -1,12 +1,91 @@
-## graphify
+# Stocktrade - Agent Reference
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+## Common Issues & Fixes
 
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+---
 
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+### 1. CONNECTION ABORTED / JSON Parse Error
+
+**Symptom:** Browser shows "CONNECTION ABORTED" after clicking Analyze.  
+**Console:** Fetch error / `response.json()` fails.  
+**Root cause:** Flask `jsonify` serializes `float('nan')` as `NaN` in JSON. `NaN` is **not valid JSON** — `JSON.parse()` in the browser throws a `SyntaxError`, caught as "CONNECTION ABORTED".
+
+**Fix (app.py — analyze_stock endpoint):**
+- Replace all `NaN`/`Infinity` values with `None` before `jsonify()`
+- Helper function `clean_nan()` recursively walks dicts/lists and replaces `float('nan')` / `float('inf')` / `float('-inf')` with `None`
+- Frontend must handle `null` values: use ternary `data.last_price != null ? data.last_price.toFixed(2) : 'N/A'`
+
+**Key locations:**
+- `app.py`: `analyze_stock()` response builder → wrap `jsonify(clean_nan(result))`
+- `index.html`: `renderChart()`, price, RSI, SL display → null-safe access
+
+---
+
+### 2. Bokeh Chart Not Stretching Width
+
+**Symptom:** Chart renders in a narrow strip on the left side of the chart area.  
+**Inspector:** `<div class="bk-Figure">` appears but does not fill parent width.  
+**Root cause:** Bokeh figures created with default sizing (fixed width ~500px). The `Column` layout had `sizing_mode="stretch_width"` but individual figures did not.
+
+**Fix (bokeh_chart.py — generate_chart function):**
+- Pass `sizing_mode="stretch_width"` to **each** `_make_base_figure()` call (both `p1` and `p2`)
+- The file_html output also needs explicit CSS injection:
+  ```css
+  [data-root-id] { display: block !important; width: 100% !important; }
+  .bk-root { width: 100% !important; }
+  body { margin: 0; padding: 0; width: 100%; }
+  ```
+
+**Key locations:**
+- `bokeh_chart.py`: `_make_base_figure()` defaults → add `sizing_mode` param
+- `bokeh_chart.py`: `file_html()` output → inject CSS via `html.replace('</head>', ...)`
+- `index.html`: `#chart-container { width: 100%; }` — stay within main container
+
+---
+
+### 3. Nginx DNS Resolution (Network Alias)
+
+**Symptom:** Requests through nginx fail with connection errors.  
+**Root cause:** Nginx `proxy_pass http://app:5000;` cannot resolve `app` because the Flask container lacked the DNS alias.  
+**Fix:** Run Flask container with `--network-alias app`:
+```bash
+docker run ... --network stocktrade_default --network-alias app stocktrade-app:latest
+```
+
+---
+
+### 4. Docker Infrastructure
+
+- **Nginx** (`stocktrade-nginx-1`): Host port `5000` → container port `80`. Proxies to `http://app:5000`.
+- **Flask App** (`stocktrade-app-1`): Internal port `5000`. Must have network alias `app`.
+- **Network:** Both on `stocktrade_default`
+
+To rebuild and deploy:
+```bash
+cp /c/Users/satri/code/stocktrade/app.py /c/Users/satri/stocktrade/app.py
+cp /c/Users/satri/code/stocktrade/index.html /c/Users/satri/stocktrade/templates/index.html
+cp /c/Users/satri/code/stocktrade/bokeh_chart.py /c/Users/satri/stocktrade/bokeh_chart.py
+cd /c/Users/satri/stocktrade
+docker build -t stocktrade-app:latest .
+docker stop stocktrade-app-1 && docker rm stocktrade-app-1
+docker run -d --name stocktrade-app-1 --restart unless-stopped --network stocktrade_default --network-alias app -v /c/Users/satri/stocktrade/cache:/app/cache -v /c/Users/satri/stocktrade/logs:/app/logs stocktrade-app:latest
+```
+
+---
+
+### 5. Analyze Endpoint Method Change
+
+Changed from POST to GET to avoid form-parsing issues with nginx:
+- `app.py`: Route accepts `GET, POST, OPTIONS`
+- `app.py`: `ticker = request.args.get('ticker') or request.form.get('ticker', '').strip().upper()`
+- `index.html`: Fetch uses `${API_BASE_URL}/analyze?ticker=${encodeURIComponent(ticker)}` with `method: 'GET'`
+
+---
+
+### 6. Chart Rendering — iframe Approach
+
+The chart is rendered via **iframe** instead of inline Bokeh components:
+- `/chart_html/<ticker>` endpoint returns standalone Bokeh HTML (from `file_html()`)
+- Frontend injects `<iframe src="/chart_html/<ticker>">` instead of embedding `chart_div`
+- Avoids Bokeh JS conflicts with Tailwind `display: contents`
+- Requires `generate_chart()` NOT to be called in the `/analyze` endpoint (saves 105KB response size)

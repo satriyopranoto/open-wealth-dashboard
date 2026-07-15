@@ -7,7 +7,8 @@ Uses json_item for embedding in Flask JSON responses.
 import numpy as np
 import pandas as pd
 from bokeh.plotting import figure
-from bokeh.embed import components
+from bokeh.embed import components, file_html
+from bokeh.resources import CDN
 from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
@@ -53,7 +54,6 @@ def _make_base_figure(**kwargs):
         toolbar_sticky=False,
         tools="pan,box_zoom,wheel_zoom,reset,save",
         active_scroll="wheel_zoom",
-        sizing_mode="stretch_width",
     )
     defaults.update(kwargs)
     p = figure(**defaults)
@@ -236,6 +236,10 @@ def _format_xaxis_date(p, df):
     if tick_indices[-1] != len(df) - 1:
         tick_indices.append(len(df) - 1)
 
+    tick_labels = {i: str(df.index[i].strftime("%Y-%m-%d"))
+                   if isinstance(df.index, pd.DatetimeIndex) else str(df.index[i])
+                   for i in tick_indices}
+
     # Better: use FixedTicker
     from bokeh.models import FixedTicker
 
@@ -267,7 +271,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
     sl_series : pd.Series
         Stop Loss values (aligned with df_plot index).
     upper_bb, middle_bb, lower_bb : pd.Series
-        Bollinger Bands values (aligned with df_plot index).
+        Bollinger Bands values.
     adx_series, pdi_series, mdi_series : pd.Series
         ADX indicator values.
 
@@ -284,36 +288,20 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=400,
         title=f"Analisis Saham {ticker}",
         x_range=Range1d(-0.5, len(df) - 0.5),
-        y_axis_location="right",
+        sizing_mode="stretch_width",
     )
     p1.yaxis.formatter = NumeralTickFormatter(format="$0,0.00")
     p1.yaxis.axis_label_text_color = COLORS["text"]
 
     _candlestick_figure(p1, df, sl_series)
+    
+    # Bollinger Bands
+    bb_idx = np.arange(len(df))
+    p1.line(bb_idx, upper_bb.values, line_color="#d4af37", line_width=0.8, line_alpha=0.5, legend_label="BB Upper")
+    p1.line(bb_idx, middle_bb.values, line_color="#d4af37", line_width=1.2, line_alpha=0.7, legend_label="BB Middle")
+    p1.line(bb_idx, lower_bb.values, line_color="#d4af37", line_width=0.8, line_alpha=0.5, legend_label="BB Lower")
+    
     _format_xaxis_date(p1, df)
-
-    # ── Bollinger Bands lines ─────────────────────────────────
-    bb_source = ColumnDataSource(data=dict(
-        idx=df["idx"].values,
-        upper=upper_bb.values if hasattr(upper_bb, "values") else upper_bb,
-        middle=middle_bb.values if hasattr(middle_bb, "values") else middle_bb,
-        lower=lower_bb.values if hasattr(lower_bb, "values") else lower_bb,
-    ))
-
-    # Only plot BB bands if data is valid (not all NaN)
-    if not np.all(np.isnan(bb_source.data["upper"])):
-        # Upper band
-        p1.line("idx", "upper", source=bb_source,
-                line_color="#9b59b6", line_width=1.0, line_alpha=0.6,
-                legend_label="Upper BB")
-        # Middle band
-        p1.line("idx", "middle", source=bb_source,
-                line_color="#e67e22", line_width=1.2, line_alpha=0.7,
-                legend_label="Middle BB")
-        # Lower band
-        p1.line("idx", "lower", source=bb_source,
-                line_color="#9b59b6", line_width=1.0, line_alpha=0.6,
-                legend_label="Lower BB")
 
     # Crosshair on main chart
     p1.add_tools(CrosshairTool(line_color="#666666", line_alpha=0.4))
@@ -368,7 +356,7 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         height=160,
         x_range=p1.x_range,
         x_axis_location="below",
-        y_axis_location="right",
+        sizing_mode="stretch_width",
     )
     p2.yaxis.formatter = NumeralTickFormatter(format="0.0")
     p2.yaxis.axis_label = "ADX"
@@ -403,16 +391,6 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         p.legend.border_line_alpha = 0.5
         p.legend.click_policy = "hide"
 
-    # ── Limit default view to last 200 bars ───────────────────
-    # Data di-fetch 400d untuk akurasi SMA200, tapi menampilkan
-    # 400 bar sekaligus bikin SMA200 muncul di tengah chart.
-    # Default view cukup 200 bar terakhir, user bisa pan ke kiri
-    # untuk lihat data lama kapan saja.
-    display_bars = min(200, len(df))
-    x_start = len(df) - display_bars
-    p1.x_range = Range1d(x_start - 0.5, len(df) - 0.5)
-    p2.x_range = p1.x_range  # share same object so pan/zoom stays synced
-
     # ── Layout ────────────────────────────────────────────────
     layout = column(
         p1,
@@ -421,6 +399,15 @@ def generate_chart(ticker, df_plot, sl_series, upper_bb, middle_bb, lower_bb, ad
         spacing=0,
     )
 
-    script, div = components(layout)
-    script = script.replace("<script>", "").replace("</script>", "").strip()
-    return script, div
+    # file_html generates a standalone HTML page with all Bokeh resources embedded
+    html = file_html(layout, CDN, f"Chart {ticker}")
+    # Inject CSS to ensure chart fills width (Bokeh 3.9.1 default display:contents can cause width issues)
+    html = html.replace(
+        '</head>',
+        '''<style>
+      body { margin: 0; padding: 0; width: 100%; }
+      [data-root-id] { display: block !important; width: 100% !important; }
+      .bk-root { width: 100% !important; }
+    </style></head>'''
+    )
+    return '', html

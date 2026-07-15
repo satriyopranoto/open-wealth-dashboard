@@ -48,9 +48,11 @@
             border-radius: 8px;
         }
 
-        .container {
-            max-width: 1000px;
+        #main-container {
+            max-width: 1400px;
             width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
         input {
@@ -137,10 +139,19 @@
             border: 1px solid rgba(212, 175, 55, 0.2);
         }
         #bokeh-chart > div { width: 100% !important; }
+        #bokeh-chart > div > div { width: 100% !important; }
+        #bokeh-chart [data-root-id] { display: block !important; width: 100% !important; }
+        #bokeh-chart { width: 100%; }
+        #bokeh-chart iframe { width: 100% !important; height: 620px !important; }
+        #chart-container {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
-<div class="container space-y-8"><nav class="flex justify-center mb-12 border-b border-[#d4af37]/20 pb-4">
+<div id="main-container" class="space-y-8"><nav class="flex justify-center mb-12 border-b border-[#d4af37]/20 pb-4">
 <div class="flex gap-8">
 <!-- Fundamental Screener Dropdown -->
 <div class="relative group">
@@ -175,6 +186,8 @@
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-bb-breakout'); return false;">ID BB Breakout</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx'); return false;">US Basis ADX</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-basis-adx'); return false;">ID Basis ADX</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx-mt'); return false;">US Basis ADX MT</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-basis-adx-mt'); return false;">ID Basis ADX MT</a>
 </div>
 </div>
 </div>
@@ -260,6 +273,27 @@
         </div>
     </div>
 </div>
+<!-- Screener Progress Container (separate from extraction) -->
+<div class="hidden glass-panel p-8" id="screener-progress">
+    <h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
+        <span class="w-8 h-[1px] bg-[#d4af37]"></span> <span id="screener-title">Screener</span>
+    </h3>
+    <div class="space-y-4">
+        <div class="flex justify-between items-center">
+            <span class="text-[#99907c] text-sm uppercase tracking-wider" id="screener-status">Starting...</span>
+            <span class="text-[#d4af37] font-bold text-lg" id="screener-counter">0 / 0</span>
+        </div>
+        <div class="relative w-full bg-[#2d2a21] rounded-full h-6 overflow-hidden border border-[#d4af37]/30">
+            <div class="absolute inset-0 bg-gradient-to-r from-[#d4af37]/20 to-transparent"></div>
+            <div class="relative h-full bg-[#d4af37] rounded-full transition-all duration-300" id="screener-bar" style="width: 0%">
+                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-black drop-shadow-sm" id="screener-percent">0%</span>
+            </div>
+        </div>
+        <div class="text-center">
+            <span class="text-[#99907c] text-xs" id="screener-ticker"></span>
+        </div>
+    </div>
+</div>
 <div class="space-y-8 hidden" id="result-area">
 <!-- Market Overview -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -288,8 +322,8 @@
 </div>
 </div>
 <!-- Visualization -->
-<div class="glass-panel p-4 overflow-hidden" id="chart-container">
-<div id="bokeh-chart" class="w-full"></div>
+<div id="chart-container">
+    <div id="bokeh-chart" class="w-full"></div>
 </div>
 <!-- Trend Analysis (ADX + SMA20) -->
 <div class="glass-panel p-6 trend-analysis-panel" id="trend-analysis-section">
@@ -481,6 +515,7 @@
             statusDiv.className = 'loading text-[#d4af37]';
             resultArea.style.display = 'none';
             document.getElementById('extraction-progress').classList.add('hidden');
+            document.getElementById('screener-progress').classList.add('hidden');
             document.getElementById('screener-results').classList.add('hidden');
 
             try {
@@ -564,6 +599,12 @@
             } else if (type === 'id-basis-adx') {
                 endpoint = '/screener/id-basis-adx';
                 titleText = 'ID Basis ADX Screener';
+            } else if (type === 'us-basis-adx-mt') {
+                endpoint = '/screener/us-basis-adx-mt';
+                titleText = 'US Basis ADX MT Screener';
+            } else if (type === 'id-basis-adx-mt') {
+                endpoint = '/screener/id-basis-adx-mt';
+                titleText = 'ID Basis ADX MT Screener';
             }
 
             statusDiv.textContent = 'LOADING SCREENER DATA...';
@@ -571,21 +612,24 @@
             resultArea.classList.add('hidden');
             screenerResults.classList.add('hidden');
             document.getElementById('extraction-progress').classList.add('hidden');
+            document.getElementById('screener-progress').classList.add('hidden');
 
-            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental' || type === 'us-basis-adx' || type === 'id-basis-adx';
+            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental' || type === 'us-basis-adx' || type === 'id-basis-adx' || type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt';
 
             try {
                 let data = null;
                 
                 if (isProgressScreener) {
-                    const extractionProgress = document.getElementById('extraction-progress');
-                    const extractionTitle = document.getElementById('extraction-title');
-                    const extractionStatus = document.getElementById('extraction-status');
-                    const extractionCounter = document.getElementById('extraction-counter');
-                    const extractionBar = document.getElementById('extraction-bar');
-                    const extractionPercent = document.getElementById('extraction-percent');
-                    const extractionTicker = document.getElementById('extraction-ticker');
+                    const extractionProgress = document.getElementById('screener-progress');
+                    const extractionTitle = document.getElementById('screener-title');
+                    const extractionStatus = document.getElementById('screener-status');
+                    const extractionCounter = document.getElementById('screener-counter');
+                    const extractionBar = document.getElementById('screener-bar');
+                    const extractionPercent = document.getElementById('screener-percent');
+                    const extractionTicker = document.getElementById('screener-ticker');
                     
+                    // Hide extraction panel, show screener panel
+                    document.getElementById('extraction-progress').classList.add('hidden');
                     extractionProgress.classList.remove('hidden');
                     extractionTitle.textContent = titleText;
                     extractionStatus.textContent = 'Starting...';
@@ -599,8 +643,16 @@
                         progressEndpoint = '/screener/fundamental-progress';
                     } else if (type === 'us-basis-adx' || type === 'id-basis-adx') {
                         progressEndpoint = '/screener/basis-adx-progress';
+                    } else if (type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt') {
+                        progressEndpoint = '/screener/basis-adx-mt-progress';
                     }
-                    const eventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
+                    // Close previous SSE (extraction or other screener) sebelum bikin baru
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    eventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
+                    const currentSource = eventSource;
                     let screenerData = null;
                     let hasCompleted = false;
                     
@@ -622,8 +674,10 @@
                                 hasCompleted = true;
                                 statusDiv.className = progress.status === 'completed' ? 'success text-[#4ade80]' : 'error text-red-400';
                                 extractionProgress.classList.add('hidden');
-                                if (eventSource) {
+                                // Only close if this source is still the current one
+                                if (eventSource === currentSource) {
                                     eventSource.close();
+                                    eventSource = null;
                                 }
                                 
                                 if (screenerData && screenerData.data && screenerData.data.length > 0) {
@@ -662,12 +716,13 @@
                             statusDiv.textContent = 'CONNECTION LOST';
                             statusDiv.className = 'error text-red-400';
                         }
-                        if (eventSource) {
+                        if (eventSource === currentSource) {
                             eventSource.close();
+                            eventSource = null;
                         }
                     };
                     
-                    statusDiv.textContent = (type === 'us-fundamental' || type === 'id-fundamental') ? 'RUNNING FUNDAMENTAL SCREENER...' : 'RUNNING BB SCREENER...';
+                    statusDiv.textContent = (type === 'us-fundamental' || type === 'id-fundamental') ? 'RUNNING FUNDAMENTAL SCREENER...' : 'RUNNING SCREENER...';
                     statusDiv.className = 'loading text-[#d4af37]';
                     
                     try {
@@ -682,8 +737,9 @@
                             if (response.status === 429) {
                                 statusDiv.textContent = 'RATE LIMIT: ' + screenerData.message;
                                 statusDiv.className = 'error text-red-400';
-                                if (eventSource) {
+                                if (eventSource === currentSource) {
                                     eventSource.close();
+                                    eventSource = null;
                                 }
                                 return;
                             } else if (response.status === 409) {
@@ -694,34 +750,52 @@
                             } else {
                                 statusDiv.textContent = 'ERROR: ' + screenerData.message;
                                 statusDiv.className = 'error text-red-400';
-                                if (eventSource) {
+                                if (eventSource === currentSource) {
                                     eventSource.close();
+                                    eventSource = null;
                                 }
                                 return;
                             }
                         }
                         
                         if (screenerData.status === 'success' && screenerData.data && screenerData.data.length > 0) {
+                            // Skip kalo user udah pindah page (eventSource udah diganti)
+                            const isStillCurrent = (eventSource === currentSource);
                             if (screenerData.from_cache) {
                                 hasCompleted = true;
-                                if (eventSource) eventSource.close();
-                                extractionProgress.classList.add('hidden');
-                                statusDiv.textContent = `SCREENER COMPLETE: Loaded from cache (${screenerData.count} stocks)`;
-                                statusDiv.className = 'success text-[#4ade80]';
+                                if (isStillCurrent) {
+                                    if (eventSource) {
+                                        eventSource.close();
+                                        eventSource = null;
+                                    }
+                                    extractionProgress.classList.add('hidden');
+                                    statusDiv.textContent = `SCREENER COMPLETE: Loaded from cache (${screenerData.count} stocks)`;
+                                    statusDiv.className = 'success text-[#4ade80]';
+                                }
                             } else {
                                 hasCompleted = true;
-                                if (eventSource) eventSource.close();
-                                extractionProgress.classList.add('hidden');
-                                statusDiv.textContent = `SCREENER COMPLETE: ${screenerData.count} stocks analyzed`;
-                                statusDiv.className = 'success text-[#4ade80]';
+                                if (isStillCurrent) {
+                                    if (eventSource) {
+                                        eventSource.close();
+                                        eventSource = null;
+                                    }
+                                    extractionProgress.classList.add('hidden');
+                                    statusDiv.textContent = `SCREENER COMPLETE: ${screenerData.count} stocks analyzed`;
+                                    statusDiv.className = 'success text-[#4ade80]';
+                                }
                             }
-                            renderScreenerResults(titleText, screenerData.data);
+                            if (isStillCurrent) {
+                                renderScreenerResults(titleText, screenerData.data);
+                            }
                         }
                     } catch (error) {
-                        statusDiv.textContent = 'SCREENER CONNECTION FAILED';
-                        statusDiv.className = 'error text-red-400';
-                        if (eventSource) {
-                            eventSource.close();
+                        if (eventSource === currentSource) {
+                            statusDiv.textContent = 'SCREENER CONNECTION FAILED';
+                            statusDiv.className = 'error text-red-400';
+                            if (eventSource) {
+                                eventSource.close();
+                                eventSource = null;
+                            }
                         }
                     }
                     
@@ -779,6 +853,7 @@
                             document.getElementById('ticker').value = stock.ticker;
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('extraction-progress').classList.add('hidden');
+                            document.getElementById('screener-progress').classList.add('hidden');
                             analyzeStock();
                         };
                         
@@ -840,12 +915,15 @@
             
             const endpoint = region === 'us' ? '/extract/us' : '/extract/id';
             const titleText = region === 'us' ? 'US Stocks Data Extraction' : 'ID Stocks Data Extraction';
+            let hasCompleted = false;
             
             statusDiv.textContent = 'CHECKING RATE LIMIT...';
             statusDiv.className = 'loading text-[#d4af37]';
             
             document.getElementById('result-area').classList.add('hidden');
             document.getElementById('screener-results').classList.add('hidden');
+            // Hide screener progress panel, show extraction panel
+            document.getElementById('screener-progress').classList.add('hidden');
             extractionProgress.classList.remove('hidden');
             extractionTitle.textContent = titleText;
             extractionStatus.textContent = 'Initializing...';
@@ -860,6 +938,7 @@
                 eventSource.close();
             }
             eventSource = new EventSource(`${API_BASE_URL}/extract/progress`);
+            const currentSource = eventSource;
             eventSource.onmessage = function(event) {
                 try {
                     const progress = JSON.parse(event.data);
@@ -877,17 +956,18 @@
                     }
                     
                     if (progress.status === 'completed') {
+                        hasCompleted = true;
                         statusDiv.textContent = `EXTRACTION COMPLETE: ${progress.success_count} success, ${progress.failed_count} failed`;
                         statusDiv.className = 'success text-[#4ade80]';
                         extractionStatus.textContent = 'Completed';
-                        if (eventSource) {
+                        if (eventSource === currentSource) {
                             eventSource.close();
                             eventSource = null;
                         }
                     } else if (progress.status === 'error') {
                         statusDiv.textContent = 'EXTRACTION FAILED';
                         statusDiv.className = 'error text-red-400';
-                        if (eventSource) {
+                        if (eventSource === currentSource) {
                             eventSource.close();
                             eventSource = null;
                         }
@@ -901,7 +981,7 @@
                 if (!eventSource) return;
                 statusDiv.textContent = 'CONNECTION LOST';
                 statusDiv.className = 'error text-red-400';
-                if (eventSource) {
+                if (eventSource === currentSource) {
                     eventSource.close();
                     eventSource = null;
                 }
@@ -937,7 +1017,7 @@
                             statusDiv.textContent = 'CONNECTION LOST';
                             statusDiv.className = 'error text-red-400';
                         }
-                        if (eventSource) {
+                        if (eventSource === currentSource) {
                             eventSource.close();
                             eventSource = null;
                         }
@@ -963,12 +1043,12 @@
             resultArea.classList.add('hidden');
             document.getElementById('screener-results').classList.add('hidden');
             document.getElementById('extraction-progress').classList.add('hidden');
+            document.getElementById('screener-progress').classList.add('hidden');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/analyze`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ ticker: ticker })
+                const response = await fetch(`${API_BASE_URL}/analyze?ticker=${encodeURIComponent(ticker)}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
                 });
 
                 const data = await response.json();
@@ -984,8 +1064,8 @@
                     statusDiv.className = 'success text-[#4ade80]';
                     
                     document.getElementById('ticker-res').textContent = data.ticker;
-                    document.getElementById('price-res').textContent = `$${data.last_price.toFixed(2)}`;
-                    document.getElementById('rsi-res').textContent = data.rsi.toFixed(2);
+                    document.getElementById('price-res').textContent = data.last_price != null ? `$${data.last_price.toFixed(2)}` : '$N/A';
+                    document.getElementById('rsi-res').textContent = data.rsi != null ? data.rsi.toFixed(2) : 'N/A';
                     
                     if (data.cache_timestamp) {
                         const cacheDate = new Date(data.cache_timestamp);
@@ -994,8 +1074,8 @@
                         }).toUpperCase();
                     }
 
-                    document.getElementById('calc-current-price').textContent = data.last_price;
-                    document.getElementById('calc-sl').textContent = data.last_sl.toFixed(2);
+                    document.getElementById('calc-current-price').textContent = data.last_price != null ? data.last_price : 'N/A';
+                    document.getElementById('calc-sl').textContent = data.last_sl != null ? data.last_sl.toFixed(2) : 'N/A';
                     
                     const recBox = document.getElementById('recommendation-box');
                     const iconRes = document.getElementById('icon-res');
@@ -1117,15 +1197,9 @@
 
         function renderChart(data) {
             const container = document.getElementById('bokeh-chart');
-            container.innerHTML = '<div class="text-center text-[#99907c] py-8">Loading chart...</div>';
-            if (!data || !data.chart_div) {
-                container.innerHTML = '<p class="text-red-400 text-sm">No chart data received.</p>';
-                return;
-            }
-            container.innerHTML = data.chart_div;
-            const scriptEl = document.createElement('script');
-            scriptEl.textContent = data.chart_script;
-            container.appendChild(scriptEl);
+            const ticker = document.getElementById('ticker').value.toUpperCase();
+            // Inject chart via iframe pointing to chart endpoint
+            container.innerHTML = '<iframe id="chart-iframe" src="/chart_html/' + encodeURIComponent(ticker) + '" style="width:100%;height:620px;border:none;border-radius:4px;"></iframe>';
         }
 
         function renderTrendAnalysis(data) {
@@ -1435,26 +1509,15 @@
                 `;
             }
             
-            // Sort results: BUY > HOLD LONG > SHORT SELL, then by trend% desc
-            const recOrder = {'BUY': 3, 'HOLD LONG': 2, 'SHORT SELL': 1};
-            data.sort((a, b) => {
-                const ra = recOrder[a.recommendation] || 0;
-                const rb = recOrder[b.recommendation] || 0;
-                if (ra !== rb) return rb - ra;
-                const ta = a.adx_sma_pct || 0;
-                const tb = b.adx_sma_pct || 0;
-                if (ta !== tb) return tb - ta;
-                return (b.value || 0) - (a.value || 0);
-            });
-            
             data.forEach(stock => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors';
-                tr.onclick = () => {
-                    document.getElementById('ticker').value = stock.ticker;
-                    document.getElementById('screener-results').classList.add('hidden');
-                    document.getElementById('extraction-progress').classList.add('hidden');
-                    analyzeStock();
+                        tr.onclick = () => {
+                            document.getElementById('ticker').value = stock.ticker;
+                            document.getElementById('screener-results').classList.add('hidden');
+                            document.getElementById('extraction-progress').classList.add('hidden');
+                            document.getElementById('screener-progress').classList.add('hidden');
+                            analyzeStock();
                 };
                 
                 const changeClass = stock.change_pct >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]';
