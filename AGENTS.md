@@ -91,3 +91,12 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 - Frontend injects `<iframe src="/chart_html/<ticker>">` instead of embedding `chart_div`
 - Avoids Bokeh JS conflicts with Tailwind `display: contents`
 - Requires `generate_chart()` NOT to be called in the `/analyze` endpoint (saves 105KB response size)
+
+---
+
+### 7. Y-Axis Labels on Wrong Side (Left vs Right)
+
+**Symptom:** Price and ADX y-axis tick labels appear on the left side instead of right.
+**Root cause:** Bokeh's figure default is `y_axis_location="left"`.
+**Fix:** Add `y_axis_location="right"` to both `_make_base_figure()` calls in `bokeh_chart.py` (p1 and p2).
+**Key location:** `bokeh_chart.py` — `generate_chart()` → p1 and p2 figure creation.
