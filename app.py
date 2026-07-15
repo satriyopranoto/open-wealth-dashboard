@@ -3331,29 +3331,24 @@ def screener_us_basis_adx():
     _basis['is_running'] = False
     _basis["run_id"] += 1  # Track new run
     
-    if not check_extraction_marker_exists('uslist'):
-        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='error',
-                  detail='Data sync not run yet')
-        return jsonify({"status": "error", "message": "Please run data synchronization"}), 400
-    
-    if is_bb_screener_up_to_date('us-basis-adx', 'uslist'):
-        cached_data, metadata, error = load_cached_screener('us-basis-adx', extraction_list_name='uslist')
-        if cached_data is not None:
-            log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
-                      detail=f'cached: {len(cached_data)} results')
-            _basis['results'] = cached_data.to_dict('records')
-            _basis['status'] = 'completed'
-            _basis['progress'] = len(cached_data)
-            clean_records = []
-            for item in cached_data.to_dict('records'):
-                cleaned = {}
-                for k, v in item.items():
-                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
-                        cleaned[k] = None
-                    else:
-                        cleaned[k] = v
-                clean_records.append(cleaned)
-            return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    # Langsung load cache — gak perlu extraction marker
+    cached_data, metadata, error = load_cached_screener('us-basis-adx')
+    if cached_data is not None:
+        log_action('screener_basis_adx', 'us_basis_adx', params={'market': 'US'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
+        _basis['results'] = cached_data.to_dict('records')
+        _basis['status'] = 'completed'
+        _basis['progress'] = len(cached_data)
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
     
     uslist_path = os.path.join(os.path.dirname(__file__), 'uslist.csv')
     if not os.path.exists(uslist_path):
@@ -3410,29 +3405,24 @@ def screener_id_basis_adx():
     _basis['is_running'] = False
     _basis["run_id"] += 1  # Track new run
     
-    if not check_extraction_marker_exists('idlist'):
-        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='error',
-                  detail='Data sync not run yet')
-        return jsonify({"status": "error", "message": "Please run data synchronization"}), 400
-    
-    if is_bb_screener_up_to_date('id-basis-adx', 'idlist'):
-        cached_data, metadata, error = load_cached_screener('id-basis-adx', extraction_list_name='idlist')
-        if cached_data is not None:
-            log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
-                      detail=f'cached: {len(cached_data)} results')
-            _basis['results'] = cached_data.to_dict('records')
-            _basis['status'] = 'completed'
-            _basis['progress'] = len(cached_data)
-            clean_records = []
-            for item in cached_data.to_dict('records'):
-                cleaned = {}
-                for k, v in item.items():
-                    if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
-                        cleaned[k] = None
-                    else:
-                        cleaned[k] = v
-                clean_records.append(cleaned)
-            return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
+    # Langsung load cache — gak perlu extraction marker
+    cached_data, metadata, error = load_cached_screener('id-basis-adx')
+    if cached_data is not None:
+        log_action('screener_basis_adx', 'id_basis_adx', params={'market': 'ID'}, status='success',
+                  detail=f'cached: {len(cached_data)} results')
+        _basis['results'] = cached_data.to_dict('records')
+        _basis['status'] = 'completed'
+        _basis['progress'] = len(cached_data)
+        clean_records = []
+        for item in cached_data.to_dict('records'):
+            cleaned = {}
+            for k, v in item.items():
+                if isinstance(v, float) and (v != v or v == float('inf') or v == float('-inf')):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = v
+            clean_records.append(cleaned)
+        return jsonify({"status": "success", "message": "Data dari cache", "count": len(cached_data), "data": clean_records, "from_cache": True, "cache_timestamp": metadata['timestamp']})
     
     idlist_path = os.path.join(os.path.dirname(__file__), 'idlist.csv')
     if not os.path.exists(idlist_path):
