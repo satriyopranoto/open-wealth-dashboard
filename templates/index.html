@@ -182,8 +182,9 @@
 </button>
 <div class="absolute left-0 mt-2 w-56 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
 <div class="p-2 flex flex-col">
-<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-bb-breakout'); return false;">US BB Breakout</a>
-<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-bb-breakout'); return false;">ID BB Breakout</a>
+<!-- BB Breakout removed -->
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx'); return false;">US Basis ADX</a>
+<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-basis-adx'); return false;">ID Basis ADX</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx'); return false;">US Basis ADX</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="loadScreener('id-basis-adx'); return false;">ID Basis ADX</a>
 <a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="loadScreener('us-basis-adx-mt'); return false;">US Basis ADX MT</a>
@@ -191,21 +192,9 @@
 </div>
 </div>
 </div>
-<!-- Data Extraction Dropdown -->
-<div class="relative group">
-<button class="flex items-center gap-2 text-sm font-bold tracking-[0.2em] uppercase text-[#d4af37] hover:text-[#e9c349] transition-colors">
-<span>Data Syncronization</span>
-<span class="material-symbols-outlined text-xs">expand_more</span>
-</button>
-<div class="absolute left-0 mt-2 w-56 bg-[#1f1b13] border border-[#d4af37]/30 rounded-sm shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-<div class="p-2 flex flex-col">
-<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all border-b border-white/5 cursor-pointer" onclick="extractStockData('us'); return false;">Syncronize US Stocks Data</a>
-<a class="px-4 py-3 text-[11px] uppercase tracking-wider text-[#99907c] hover:bg-[#d4af37]/10 hover:text-[#d4af37] transition-all cursor-pointer" onclick="extractStockData('id'); return false;">Syncronize ID Stocks Data</a>
-</div>
-</div>
-</div>
-</div>
-</nav>
+<!-- Navigation moved below -->
+		</div>
+	</nav>
 <header class="text-center space-y-4">
 <h1 class="text-5xl text-[#d4af37]">Open Wealth Dashboard</h1>
 <p class="text-[#99907c] tracking-[0.3em] uppercase text-xs">Open Source Stock Analysis Engine</p>
@@ -240,37 +229,6 @@
             </thead>
             <tbody id="screener-body" class="text-[#eae1d4]"></tbody>
         </table>
-    </div>
-</div>
-<!-- Extraction Progress Container -->
-<div class="hidden glass-panel p-8" id="extraction-progress">
-    <h3 class="text-[#d4af37] text-xl mb-6 flex items-center gap-2">
-        <span class="w-8 h-[1px] bg-[#d4af37]"></span> <span id="extraction-title">Data Extraction</span>
-    </h3>
-    <div class="space-y-4">
-        <div class="flex justify-between items-center">
-            <span class="text-[#99907c] text-sm uppercase tracking-wider" id="extraction-status">Initializing...</span>
-            <span class="text-[#d4af37] font-bold text-lg" id="extraction-counter">0 / 0</span>
-        </div>
-        <div class="relative w-full bg-[#2d2a21] rounded-full h-6 overflow-hidden border border-[#d4af37]/30">
-            <div class="absolute inset-0 bg-gradient-to-r from-[#d4af37]/20 to-transparent"></div>
-            <div class="relative h-full bg-[#d4af37] rounded-full transition-all duration-300" id="extraction-bar" style="width: 0%">
-                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-black drop-shadow-sm" id="extraction-percent">0%</span>
-            </div>
-        </div>
-        <div class="text-center">
-            <span class="text-[#99907c] text-xs" id="extraction-ticker"></span>
-        </div>
-        <div class="flex justify-center gap-8 text-sm pt-2">
-            <div class="text-center">
-                <span class="text-[#4ade80] font-bold" id="extraction-success">0</span>
-                <span class="text-[#99907c] text-xs block">Success</span>
-            </div>
-            <div class="text-center">
-                <span class="text-[#f87171] font-bold" id="extraction-failed">0</span>
-                <span class="text-[#99907c] text-xs block">Failed</span>
-            </div>
-        </div>
     </div>
 </div>
 <!-- Screener Progress Container (separate from extraction) -->
@@ -502,7 +460,7 @@
 </div>
 </div>
 <footer class="text-center py-8">
-<p class="text-[10px] text-[#99907c] tracking-wider uppercase opacity-60 max-w-2xl mx-auto mb-4 leading-relaxed">This application is experimental and used for personal use/educational only. Source data is Yahoo Finance (you should use yahoo ticker format to get your stock analysis) and public news media. Many rate limiter protections are implemented to protect data provider and server e.g 1 hour data syncronization gap. If you have any quetions, please reach satriyo.pranoto@gmail.com</p><p class="text-[10px] text-[#99907c] tracking-[0.4em] uppercase opacity-50">Private Wealth Management Interface v4.2.0</p>
+<p class="text-[10px] text-[#99907c] tracking-wider uppercase opacity-60 max-w-2xl mx-auto mb-4 leading-relaxed">This application is experimental and used for personal use/educational only. Source data is Yahoo Finance (you should use yahoo ticker format to get your stock analysis) and public news media. If you have any questions, please reach satriyo.pranoto@gmail.com</p><p class="text-[10px] text-[#99907c] tracking-[0.4em] uppercase opacity-50">Private Wealth Management Interface v4.2.0</p>
 </footer>
 </div>
 <script>
@@ -522,7 +480,6 @@
             statusDiv.textContent = 'RE-INITIALIZING DATA STREAM...';
             statusDiv.className = 'loading text-[#d4af37]';
             resultArea.style.display = 'none';
-            document.getElementById('extraction-progress').classList.add('hidden');
             document.getElementById('screener-progress').classList.add('hidden');
             document.getElementById('screener-results').classList.add('hidden');
 
@@ -589,12 +546,6 @@
             } else if (type === 'us-acquirers-multiple') {
                 endpoint = '/screener/us-acquirers-multiple';
                 titleText = 'US The Acquirers Multiple';
-            } else if (type === 'us-bb-breakout') {
-                endpoint = '/screener/us-bb-breakout';
-                titleText = 'US BB Breakout Screener';
-            } else if (type === 'id-bb-breakout') {
-                endpoint = '/screener/id-bb-breakout';
-                titleText = 'ID BB Breakout Screener';
             } else if (type === 'us-fundamental') {
                 endpoint = '/screener/us-fundamental';
                 titleText = 'US Fundamental Screener';
@@ -619,10 +570,9 @@
             statusDiv.className = 'loading text-[#d4af37]';
             resultArea.classList.add('hidden');
             screenerResults.classList.add('hidden');
-            document.getElementById('extraction-progress').classList.add('hidden');
             document.getElementById('screener-progress').classList.add('hidden');
 
-            const isProgressScreener = type === 'us-bb-breakout' || type === 'id-bb-breakout' || type === 'us-fundamental' || type === 'id-fundamental' || type === 'us-basis-adx' || type === 'id-basis-adx' || type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt';
+            const isProgressScreener = type === 'us-fundamental' || type === 'id-fundamental' || type === 'us-basis-adx' || type === 'id-basis-adx' || type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt';
 
             try {
                 let data = null;
@@ -637,7 +587,6 @@
                     const extractionTicker = document.getElementById('screener-ticker');
                     
                     // Hide extraction panel, show screener panel
-                    document.getElementById('extraction-progress').classList.add('hidden');
                     extractionProgress.classList.remove('hidden');
                     extractionTitle.textContent = titleText;
                     extractionStatus.textContent = 'Starting...';
@@ -860,7 +809,6 @@
                         tr.onclick = () => {
                             document.getElementById('ticker').value = stock.ticker;
                             document.getElementById('screener-results').classList.add('hidden');
-                            document.getElementById('extraction-progress').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
                             analyzeStock();
                         };
@@ -909,132 +857,7 @@
 
         let eventSource = null;
 
-        async function extractStockData(region) {
-            const statusDiv = document.getElementById('status');
-            const extractionProgress = document.getElementById('extraction-progress');
-            const extractionTitle = document.getElementById('extraction-title');
-            const extractionStatus = document.getElementById('extraction-status');
-            const extractionCounter = document.getElementById('extraction-counter');
-            const extractionBar = document.getElementById('extraction-bar');
-            const extractionPercent = document.getElementById('extraction-percent');
-            const extractionTicker = document.getElementById('extraction-ticker');
-            const extractionSuccess = document.getElementById('extraction-success');
-            const extractionFailed = document.getElementById('extraction-failed');
-            
-            const endpoint = region === 'us' ? '/extract/us' : '/extract/id';
-            const titleText = region === 'us' ? 'US Stocks Data Extraction' : 'ID Stocks Data Extraction';
-            let hasCompleted = false;
-            
-            statusDiv.textContent = 'CHECKING RATE LIMIT...';
-            statusDiv.className = 'loading text-[#d4af37]';
-            
-            document.getElementById('result-area').classList.add('hidden');
-            document.getElementById('screener-results').classList.add('hidden');
-            // Hide screener progress panel, show extraction panel
-            document.getElementById('screener-progress').classList.add('hidden');
-            extractionProgress.classList.remove('hidden');
-            extractionTitle.textContent = titleText;
-            extractionStatus.textContent = 'Initializing...';
-            extractionCounter.textContent = '0 / 0';
-            extractionBar.style.width = '0%';
-            extractionTicker.textContent = '';
-            extractionSuccess.textContent = '0';
-            extractionFailed.textContent = '0';
-            
-            // Mulai SSE SEBELUM POST supaya User B bisa liat progress User A
-            if (eventSource) {
-                eventSource.close();
-            }
-            eventSource = new EventSource(`${API_BASE_URL}/extract/progress`);
-            const currentSource = eventSource;
-            eventSource.onmessage = function(event) {
-                try {
-                    const progress = JSON.parse(event.data);
-                    
-                    extractionStatus.textContent = progress.message || 'Processing...';
-                    extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
-                    extractionTicker.textContent = progress.current_ticker || '';
-                    extractionSuccess.textContent = progress.success_count || 0;
-                    extractionFailed.textContent = progress.failed_count || 0;
-                    
-                    if (progress.total > 0) {
-                        const percent = Math.round((progress.progress / progress.total) * 100);
-                        extractionBar.style.width = `${percent}%`;
-                        extractionPercent.textContent = `${percent}%`;
-                    }
-                    
-                    if (progress.status === 'completed') {
-                        hasCompleted = true;
-                        statusDiv.textContent = `EXTRACTION COMPLETE: ${progress.success_count} success, ${progress.failed_count} failed`;
-                        statusDiv.className = 'success text-[#4ade80]';
-                        extractionStatus.textContent = 'Completed';
-                        if (eventSource === currentSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                    } else if (progress.status === 'error') {
-                        statusDiv.textContent = 'EXTRACTION FAILED';
-                        statusDiv.className = 'error text-red-400';
-                        if (eventSource === currentSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error parsing progress:', e);
-                }
-            };
-            
-            eventSource.onerror = function() {
-                if (!eventSource) return;
-                statusDiv.textContent = 'CONNECTION LOST';
-                statusDiv.className = 'error text-red-400';
-                if (eventSource === currentSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const data = await response.json();
-                
-                if (data.status === 'error') {
-                    if (response.status === 429) {
-                        statusDiv.textContent = 'RATE LIMIT: ' + data.message;
-                    } else if (response.status === 409) {
-                        statusDiv.textContent = 'MONITORING ACTIVE EXTRACTION...';
-                    } else {
-                        statusDiv.textContent = 'EXTRACTION ERROR: ' + data.message;
-                    }
-                    statusDiv.className = 'loading text-[#d4af37]';
-                    return;
-                }
-                
-                statusDiv.textContent = 'EXTRACTION IN PROGRESS...';
-                statusDiv.className = 'loading text-[#d4af37]';
-                
-                // Update onerror handler (SSE mungkin sempat null karena idle → close)
-                if (eventSource) {
-                    eventSource.onerror = function() {
-                        if (!hasCompleted) {
-                            statusDiv.textContent = 'CONNECTION LOST';
-                            statusDiv.className = 'error text-red-400';
-                        }
-                        if (eventSource === currentSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                    };
-                } else {
-                    // SSE sempat keganti null karena flush idle — reconnect otomatis dari browser
-                    console.log('SSE idle-flushed, waiting for auto-reconnect...');
-                }
-                
+        async function loadScreener(type) {
             } catch (error) {
                 statusDiv.textContent = 'EXTRACTION FAILED';
                 statusDiv.className = 'error text-red-400';
@@ -1050,7 +873,6 @@
             statusDiv.className = 'loading text-[#d4af37]';
             resultArea.classList.add('hidden');
             document.getElementById('screener-results').classList.add('hidden');
-            document.getElementById('extraction-progress').classList.add('hidden');
             document.getElementById('screener-progress').classList.add('hidden');
 
             try {
@@ -1533,7 +1355,6 @@
                         tr.onclick = () => {
                             document.getElementById('ticker').value = stock.ticker;
                             document.getElementById('screener-results').classList.add('hidden');
-                            document.getElementById('extraction-progress').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
                             analyzeStock();
                 };
