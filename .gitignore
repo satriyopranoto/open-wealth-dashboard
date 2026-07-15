@@ -27,3 +27,20 @@ Thumbs.db
 # Logs
 logs/
 *.Zone.Identifier
+# Python
+*.pyc
+__pycache__/
+*.bak
+*.swp
+*.swo
+
+# Temp / Patch scripts
+fix_*.py
+patch_*.py
+
+# Docker build context
+app.py.bak
+
+# OS
+.DS_Store
+Thumbs.db
