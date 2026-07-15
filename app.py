@@ -1127,17 +1127,40 @@ def refresh_data():
 
 @app.route('/chart_html/<ticker>', methods=['GET'])
 def serve_chart_html(ticker):
-    """Serve standalone Bokeh chart HTML for iframe embedding."""
+    """Serve standalone Bokeh chart HTML for iframe embedding.
+    Supports timeframe parameter: ?tf=1d (default), 1h, 1wk, 1mo
+    """
     from bokeh_chart import generate_chart
     import yfinance as yf
     import numpy as np
     
+    # Timeframe mapping
+    tf = request.args.get('tf', '1d')
+    tf_config = {
+        '1h':  {'period': '30d',  'interval': '1h',  'label': 'H1'},
+        '4h':  {'period': '60d',  'interval': '1h',  'label': 'H4'},
+        '1d':  {'period': '400d', 'interval': '1d',  'label': 'D1'},
+        '1wk': {'period': '2y',   'interval': '1wk', 'label': 'W1'},
+        '1mo': {'period': '10y',  'interval': '1mo', 'label': 'MN'},
+    }
+    config = tf_config.get(tf, tf_config['1d'])
+    
     try:
-        # Download data
+        # Download data with timeframe-appropriate period and interval
         stock = yf.Ticker(ticker)
-        df = stock.history(period="400d")
+        df = stock.history(period=config['period'], interval=config['interval'])
         if df.empty:
-            return "<html><body><p style='color:red'>No data for " + ticker + "</p></body></html>", 404
+            return f"<html><body><p style='color:red'>No data for {ticker} ({tf})</p></body></html>", 404
+        
+        # For H4, resample 1h to 4h candles
+        if tf == '4h' and len(df) > 0:
+            df = df.resample('4h').agg({
+                'Open': 'first',
+                'High': 'max',
+                'Low': 'min',
+                'Close': 'last',
+                'Volume': 'sum'
+            }).dropna()
         
         # Calculate required indicators
         df_plot = df.copy()
