@@ -128,3 +128,27 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 - `1mo` → monthly (10y), interval="1mo"
 **Frontend:** `templates/index.html` — `.tf-btn` buttons call `changeTimeframe(tf, btn)`.
 **Key locations:** `app.py` → `serve_chart_html()`, `templates/index.html` → `renderChart()` + `changeTimeframe()`.
+
+---
+
+### 10. SL Timeframe Sync (Risk Management)
+
+**Feature:** When user clicks a timeframe button (H1/H4/D1/W1/MN), the **Stop Loss** value in the Risk Management section auto-updates to match the selected chart timeframe's Donchian SL.
+
+**How it works:**
+- `changeTimeframe(tf, btn)` in `index.html` now also calls `/sl?ticker=X&tf=1h`
+- Backend `/sl` endpoint downloads data with timeframe-appropriate period/interval, calculates `calculate_sl()` on that data, returns the timeframe-specific SL
+- Frontend updates `#calc-sl` textContent and calls `calculateLotSize()` to re-calc exposure with the new SL
+
+**Example results (AAPL):**
+| Timeframe | SL |
+|-----------|-----|
+| D1 (daily) | 273.75 (wide — higher volatility) |
+| H1 | 311.91 (tighter — lower volatility) |
+
+**Key locations:**
+- `app.py` → `get_sl_for_timeframe()` (new endpoint `/sl`)
+- `templates/index.html` → `changeTimeframe()` (added fetch + update logic)
+
+**Note:** D1 button is the default active state on initial page load.
+
