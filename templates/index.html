@@ -515,8 +515,9 @@
 
         async function loadScreener(type) {
             if (screenerRunning) {
-                document.getElementById('status').textContent = 'SCREENER ALREADY RUNNING - Please wait';
+                document.getElementById('status').textContent = 'SCREENER IS RUNNING - See progress below';
                 document.getElementById('status').className = 'loading text-[#d4af37]';
+                document.getElementById('screener-progress').classList.remove('hidden');
                 return;
             }
             screenerRunning = true;
@@ -729,6 +730,7 @@
                             const isStillCurrent = (eventSource === currentSource);
                             if (screenerData.from_cache) {
                                 hasCompleted = true;
+                                screenerRunning = false;
                                 if (isStillCurrent) {
                                     if (eventSource) {
                                         eventSource.close();
@@ -740,6 +742,7 @@
                                 }
                             } else {
                                 hasCompleted = true;
+                                screenerRunning = false;
                                 if (isStillCurrent) {
                                     if (eventSource) {
                                         eventSource.close();
