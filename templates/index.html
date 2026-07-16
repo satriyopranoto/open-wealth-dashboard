@@ -829,6 +829,7 @@
                             document.getElementById('ticker').value = stock.ticker;
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
+                            history.pushState({ view: 'analysis' }, '', '#analyze');
                             analyzeStock();
                         };
                         
@@ -867,6 +868,12 @@
                     });
                     
                     screenerResults.classList.remove('hidden');
+                    
+                    // Save for back-navigation & push history state
+                    savedScreenerData = data.data;
+                    savedScreenerType = type;
+                    savedScreenerTitle = titleText;
+                    history.pushState({ view: 'screener', type: type }, '', '#screener');
                 }
             } catch (error) {
                 statusDiv.textContent = 'SCREENER CONNECTION FAILED';
@@ -877,6 +884,32 @@
 
         let eventSource = null;
         let screenerRunning = false;
+        let savedScreenerData = null;    // Last screener results for back-navigation
+        let savedScreenerType = '';
+        let savedScreenerTitle = '';
+
+        // Browser back/forward navigation
+        window.addEventListener('popstate', function(event) {
+            if (event.state && event.state.view === 'screener') {
+                // Back to screener results — re-show saved data
+                if (savedScreenerData && savedScreenerData.length > 0) {
+                    document.getElementById('screener-results').classList.remove('hidden');
+                    document.getElementById('result-area').classList.add('hidden');
+                    document.getElementById('screener-progress').classList.add('hidden');
+                    renderScreenerResults(savedScreenerTitle, savedScreenerData, false);
+                    document.getElementById('status').textContent = `SCREENER: ${savedScreenerTitle}`;
+                    document.getElementById('status').className = 'success text-[#4ade80]';
+                }
+            } else if (!event.state || event.state.view === 'analysis') {
+                // Back to initial page
+                document.getElementById('screener-results').classList.add('hidden');
+                document.getElementById('result-area').classList.add('hidden');
+                document.getElementById('screener-progress').classList.add('hidden');
+                document.getElementById('status').textContent = 'Select a stock to analyze or run a screener';
+                document.getElementById('status').className = '';
+                document.getElementById('ticker').value = '';
+            }
+        });
 
         async function analyzeStock() {
             const ticker = document.getElementById('ticker').value.toUpperCase();
@@ -1332,7 +1365,7 @@
             section.style.display = 'block';
         }
 
-        function renderScreenerResults(titleText, data) {
+        function renderScreenerResults(titleText, data, pushState) {
             const screenerResults = document.getElementById('screener-results');
             const screenerTitle = document.getElementById('screener-title');
             const theadRow = document.querySelector('#screener-results thead tr');
@@ -1386,6 +1419,7 @@
                             document.getElementById('ticker').value = stock.ticker;
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
+                            history.pushState({ view: 'analysis' }, '', '#analyze');
                             analyzeStock();
                 };
                 
@@ -1455,6 +1489,13 @@
             });
             
             screenerResults.classList.remove('hidden');
+            
+            // Save for back-navigation
+            savedScreenerData = data;
+            savedScreenerTitle = titleText;
+            if (pushState !== false) {
+                history.pushState({ view: 'screener' }, '', '#screener');
+            }
         }
     </script>
 </body></html><!-- TREND_MARKER_MY_EDIT_2026 -->
