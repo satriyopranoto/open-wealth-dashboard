@@ -1,46 +1,14 @@
-# Python
-venv/
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-.Python
-
-# Environment
 .env
-.env.*
-
-# Cache data (generated at runtime)
-cache/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Jupyter
-*.ipynb_checkpoints
-
-# Logs
-logs/
-*.Zone.Identifier
-# Python
-*.pyc
-__pycache__/
 *.bak
-*.swp
-*.swo
-
-# Temp / Patch scripts
-fix_*.py
-patch_*.py
-
-# Docker build context
 app.py.bak
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Docker volume mount data (not tracked)
+cache/
+logs/

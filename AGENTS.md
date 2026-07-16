@@ -64,14 +64,18 @@ To rebuild and deploy from the Windows git clone:
 ```bash
 # Clone is at C:\Users\satri\code\stocktrade — build directly from there
 cd /c/Users/satri/code/stocktrade
-docker build -t stocktrade-app:latest .
+docker build -t stocktrade-app:latest "C:\Users\satri\code\stocktrade"
+# or: DOCKER_BUILDKIT=0 docker build -t stocktrade-app:latest .
 docker stop stocktrade-app-1 && docker rm stocktrade-app-1
 docker run -d --name stocktrade-app-1 --restart unless-stopped \
   --network stocktrade_default --network-alias app \
-  -v /c/Users/satri/stocktrade/cache:/app/cache \
-  -v /c/Users/satri/stocktrade/logs:/app/logs \
+  -v /c/Users/satri/code/stocktrade/cache:/app/cache \
+  -v /c/Users/satri/code/stocktrade/logs:/app/logs \
   stocktrade-app:latest
 ```
+
+**⚠️ One Source of Truth:** Semua data aplikasi (code + cache + logs) di `C:\Users\satri\code\stocktrade`. Jangan buat folder duplikat di luar repo.
+
 
 ---
 
