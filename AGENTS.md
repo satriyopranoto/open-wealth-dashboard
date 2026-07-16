@@ -156,3 +156,35 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 
 **Note:** D1 button is the default active state on initial page load.
 
+---
+
+### 11. Screener State Management & Clean Restart
+
+**Symptom:** Clicking a new screener (e.g. ID Gainers → ID Basis ADX) showed "SCREENER IS RUNNING - See progress below" but old results stayed visible and progress bar was stuck on "Initializing...".
+
+**Root cause:** Multiple issues:
+1. **`screenerRunning` never reset** in the non-progress path (`day-gainers`, `most-active`, etc.) — the success handler at `loadScreener` else-branch didn't set `screenerRunning = false`, so subsequent clicks were blocked by the guard.
+2. **Guard returned without cleanup** — the `if (screenerRunning) { return; }` guard just showed a message and returned, without hiding old results or closing the stale SSE.
+3. **Progress panel hidden below old results** — the guard didn't hide `#result-area` / `#screener-results`, so the progress panel was visually buried.
+
+**Fix (`templates/index.html` → `loadScreener()`):**
+- Removed the `screenerRunning` guard that returned early
+- Every click now **always** closes old SSE (`eventSource.close()`), hides old results, and starts fresh
+- Added `screenerRunning = true` right after cleanup, `screenerRunning = false` in ALL completion paths:
+  - Non-progress success handler (line ~796)
+  - Cache response handler (lines ~739, ~751)
+  - SSE completion with data (line ~655)
+  - `retryFetch` success in SSE else-branch (line ~668)
+  - Error/catch handler (line ~874)
+- **401/409 handlers** already had `screenerRunning = false` (unchanged)
+
+**Key locations:**
+- `templates/index.html` → `loadScreener()` — cleanup block at top (lines 516-531)
+- `templates/index.html` → `screenerRunning = false` at lines ~578 (set), ~655, ~668, ~710, ~719, ~725, ~739, ~751, ~796, ~874 (reset)
+
+**Flow now:**
+1. Click any screener → old SSE closed, old results hidden, new SSE + POST started
+2. Screener completes → `screenerRunning = false`, results shown
+3. Click another screener → clean restart (no guard)
+4. Click same screener while running → clean restart (old SSE killed, new one started)
+
