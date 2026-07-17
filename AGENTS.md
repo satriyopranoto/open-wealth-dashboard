@@ -188,3 +188,38 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 3. Click another screener → clean restart (no guard)
 4. Click same screener while running → clean restart (old SSE killed, new one started)
 
+---
+
+### 12. Timeframe-Aware Recommendation
+
+**Feature:** Recommendation (BUY/HOLD LONG/SHORT SELL) auto-updates when user switches chart timeframe via H1/H4/D1/W1/MN buttons.
+
+**Logic by timeframe:**
+| Timeframe | Logic | Data Source |
+|-----------|-------|-------------|
+| **H1** | Basis + ADX MT | H1 data (60d) + Daily DI from H1 resample |
+| **H4** | Basis + ADX MT | H1 data (60d) + Daily DI from H1 resample |
+| **D1** | Basis + ADX (standard) | Daily data (400d) |
+| **W1** | Basis + ADX (standard) | Weekly data (2y) |
+| **MN** | Basis + ADX (standard) | Monthly data (10y) |
+
+**Difference between MT and Standard:**
+- **Standard** (D1/W1/MN): BUY if `Low > SL && Close > Basis && ADX>20 && +DI>-DI && +DI rising && ADX rising`
+- **MT** (H1/H4): Same as standard, PLUS requires **Daily +DI > Daily -DI** (resampled from H1) as confirmation — `daily_mt_ok` filter
+
+**How it works:**
+1. `changeTimeframe(tf, btn)` in `index.html` calls `/recommendation?ticker=X&tf=1h`
+2. Backend endpoint `get_recommendation_for_timeframe()` in `app.py`:
+   - For H1/H4: downloads H1 data via `download_h1_data()`, calculates H1 indicators + Daily DI via `calculate_daily_di_from_h1()`, applies MT logic
+   - For D1/W1/MN: downloads with appropriate period/interval, calculates standard indicators, applies standard logic
+   - Special for W1/MN: longer download periods (2y/10y) for adequate data
+3. Frontend updates `#rec-text-res` text, color, and `#recommendation-box` border color
+
+**Key locations:**
+- `app.py` → `get_recommendation_for_timeframe()` (new endpoint `/recommendation`)
+- `app.py` → `download_h1_data()` (line 3135)
+- `app.py` → `calculate_daily_di_from_h1()` (line 3107)
+- `templates/index.html` → `changeTimeframe()` (added fetch call)
+
+**Note:** Initial recommendation (when clicking Analyze) uses daily/standard logic. Recommendation updates in real-time when clicking timeframe buttons, same pattern as SL Timeframe Sync (Section 10).
+
