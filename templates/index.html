@@ -1102,6 +1102,27 @@
                         })
                         .catch(e => console.error('SL fetch error:', e));
                 } catch(e) { console.error('SL outer error:', e); }
+                
+                // Update recommendation sesuai timeframe chart
+                try {
+                    fetch('/recommendation?ticker=' + encodeURIComponent(ticker) + '&tf=' + tf)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.recommendation) {
+                                const recBox = document.getElementById('recommendation-box');
+                                const recText = document.getElementById('rec-text-res');
+                                if (recText) {
+                                    recText.textContent = data.recommendation;
+                                    recText.style.color = data.color || '#fbbf24';
+                                }
+                                if (recBox) {
+                                    recBox.className = 'glass-panel p-8 flex items-center justify-center gap-4 border-l-4';
+                                    recBox.style.borderLeftColor = data.color || '#fbbf24';
+                                }
+                            }
+                        })
+                        .catch(e => console.error('Recommendation fetch error:', e));
+                } catch(e) { console.error('Recommendation outer error:', e); }
             } else { console.log('ticker empty, skipping SL fetch'); }
         }
 

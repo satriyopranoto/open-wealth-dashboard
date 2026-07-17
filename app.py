@@ -1364,6 +1364,160 @@ def get_sl_for_timeframe():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/recommendation', methods=['GET', 'OPTIONS'])
+def get_recommendation_for_timeframe():
+    """
+    Return trading recommendation for a specific timeframe.
+    - D1, W1, MN: Basis + ADX (standard) logic
+    - H1, H4: Basis + ADX MT logic (with Daily DI confirmation from H1 data)
+    """
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        return response
+
+    ticker = (request.args.get('ticker') or '').strip().upper()
+    if not ticker:
+        return jsonify({"status": "error", "message": "ticker required"}), 400
+
+    tf = request.args.get('tf', '1d')
+
+    is_intraday = tf in ('1h', '4h')
+
+    try:
+        if is_intraday:
+            # ── MT Logic (H1/H4) ──
+            data = download_h1_data(ticker, period="60d")
+            if data is None or len(data) < 60:
+                return jsonify({"status": "error", "message": f"Insufficient H1 data for {ticker}"}), 404
+
+            numeric_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+            for col in numeric_cols:
+                if col in data.columns:
+                    data[col] = pd.to_numeric(data[col], errors='coerce')
+            data = data.dropna(subset=['Close'])
+
+            # Calculate indicators
+            sl_series = calculate_sl(data)
+            upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+            adx_series, pdi_series, mdi_series = calculate_adx(data)
+
+            last_price = float(data['Close'].iloc[-1])
+            last_low = float(data['Low'].iloc[-1])
+            last_sl = float(sl_series.iloc[-1])
+            last_basis = float(middle_bb.iloc[-1])
+
+            if np.isnan(last_sl) or np.isnan(last_basis):
+                return jsonify({"status": "error", "message": "Invalid SL or Basis data"}), 500
+
+            last_adx = float(adx_series.iloc[-1])
+            last_pdi = float(pdi_series.iloc[-1])
+            last_mdi = float(mdi_series.iloc[-1])
+            pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+            adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+
+            pdi_rising = last_pdi > pdi_5ago
+            pdi_above_mdi = last_pdi > last_mdi
+            adx_strong = last_adx > 20
+            adx_rising = last_adx > adx_5ago
+            is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
+
+            # Daily DI from H1 resample
+            d_pdi, d_mdi = calculate_daily_di_from_h1(data)
+            daily_mt_ok = (not np.isnan(d_pdi) and not np.isnan(d_mdi) and d_pdi > d_mdi)
+
+            # ── MT Recommendation ──
+            if last_low > last_sl and last_price > last_basis:
+                if (not is_nan and pdi_above_mdi and adx_strong and pdi_rising and adx_rising and daily_mt_ok):
+                    recommendation = "BUY"
+                    color = "#4ade80"
+                else:
+                    recommendation = "HOLD LONG"
+                    color = "#fbbf24"
+            elif last_price > last_sl:
+                recommendation = "HOLD LONG"
+                color = "#fbbf24"
+            else:
+                recommendation = "SHORT SELL"
+                color = "#f87171"
+
+            adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+
+        else:
+            # ── Standard Logic (D1/W1/MN) ──
+            tf_config = {
+                '1d':  {'period': '400d', 'interval': '1d'},
+                '1wk': {'period': '2y',   'interval': '1wk'},
+                '1mo': {'period': '10y',  'interval': '1mo'},
+            }
+            config = tf_config.get(tf, tf_config['1d'])
+
+            stock = yf.Ticker(ticker)
+            data = stock.history(period=config['period'], interval=config['interval'])
+            if data.empty or len(data) < 30:
+                return jsonify({"status": "error", "message": f"Insufficient data for {ticker} on {tf}"}), 404
+
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.get_level_values(0)
+
+            # Calculate indicators
+            sl_series = calculate_sl(data)
+            upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+            adx_series, pdi_series, mdi_series = calculate_adx(data)
+
+            last_price = float(data['Close'].iloc[-1])
+            last_low = float(data['Low'].iloc[-1])
+            last_sl = float(sl_series.iloc[-1])
+            last_basis = float(middle_bb.iloc[-1])
+
+            if np.isnan(last_sl) or np.isnan(last_basis):
+                return jsonify({"status": "error", "message": "Invalid SL or Basis data"}), 500
+
+            last_adx = float(adx_series.iloc[-1])
+            last_pdi = float(pdi_series.iloc[-1])
+            last_mdi = float(mdi_series.iloc[-1])
+            pdi_5ago = float(pdi_series.iloc[-6]) if len(pdi_series) >= 6 else 0
+            adx_5ago = float(adx_series.iloc[-6]) if len(adx_series) >= 6 else 0
+
+            pdi_rising = last_pdi > pdi_5ago
+            pdi_above_mdi = last_pdi > last_mdi
+            adx_strong = last_adx > 20
+            adx_rising = last_adx > adx_5ago
+            is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
+
+            # ── Standard Recommendation ──
+            if last_low > last_sl and last_price > last_basis:
+                if (not is_nan and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
+                    recommendation = "BUY"
+                    color = "#4ade80"
+                else:
+                    recommendation = "HOLD LONG"
+                    color = "#fbbf24"
+            elif last_price > last_sl:
+                recommendation = "HOLD LONG"
+                color = "#fbbf24"
+            else:
+                recommendation = "SHORT SELL"
+                color = "#f87171"
+
+            adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
+
+        return jsonify({
+            "status": "success",
+            "ticker": ticker,
+            "tf": tf,
+            "recommendation": recommendation,
+            "color": color,
+            "adx_sma_pct": adx_sma_pct,
+            "trend_commentary": trend_commentary,
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def fetch_related_news(ticker):
     """Fetch related news from Google News dengan multiple languages dan regions"""
     # Cache news per ticker selama 1 jam
