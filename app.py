@@ -1518,6 +1518,92 @@ def get_recommendation_for_timeframe():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/trend-analysis', methods=['GET', 'OPTIONS'])
+def get_trend_analysis_for_timeframe():
+    """
+    Return trend analysis (ADX + SMA20) for a specific timeframe.
+    Allows Trend Analysis panel to match the active chart timeframe.
+    """
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        return response
+
+    ticker = (request.args.get('ticker') or '').strip().upper()
+    if not ticker:
+        return jsonify({"status": "error", "message": "ticker required"}), 400
+
+    tf = request.args.get('tf', '1d')
+    tf_config = {
+        '1h':  {'period': '30d',  'interval': '1h'},
+        '4h':  {'period': '60d',  'interval': '1h'},
+        '1d':  {'period': '400d', 'interval': '1d'},
+        '1wk': {'period': '2y',   'interval': '1wk'},
+        '1mo': {'period': '10y',  'interval': '1mo'},
+    }
+    config = tf_config.get(tf, tf_config['1d'])
+
+    try:
+        import yfinance as yf
+        import numpy as np
+
+        stock = yf.Ticker(ticker)
+        data = stock.history(period=config['period'], interval=config['interval'])
+
+        if data.empty or len(data) < 30:
+            return jsonify({"status": "error", "message": f"Insufficient data for {ticker} on {tf}"}), 404
+
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
+        if tf == '4h' and len(data) > 0:
+            data = data.resample('4h').agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min',
+                'Close': 'last', 'Volume': 'sum'
+            }).dropna()
+
+        # Calculate indicators
+        upper_bb, middle_bb, lower_bb = calculate_bollinger_bands(data)
+        adx_series, pdi_series, mdi_series = calculate_adx(data)
+
+        # Run trend analysis on this timeframe's data
+        trend_analysis = calculate_trend_analysis(data, adx_series, pdi_series, mdi_series, middle_bb)
+
+        # Label mapping for display
+        tf_labels = {
+            '1h': '30d H1 Data',
+            '4h': '60d H4 Data',
+            '1d': '400d Daily Data',
+            '1wk': '2y Weekly Data',
+            '1mo': '10y Monthly Data',
+        }
+        tf_label = tf_labels.get(tf, 'Daily Data')
+
+        # Clean NaN for JSON safety
+        def clean_nan(obj):
+            import math
+            if isinstance(obj, dict):
+                return {k: clean_nan(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_nan(x) for x in obj]
+            elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+                return None
+            return obj
+
+        return jsonify({
+            "status": "success",
+            "ticker": ticker,
+            "tf": tf,
+            "tf_label": tf_label,
+            "trend_analysis": clean_nan(trend_analysis),
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def fetch_related_news(ticker):
     """Fetch related news from Google News dengan multiple languages dan regions"""
     # Cache news per ticker selama 1 jam

@@ -294,7 +294,7 @@
 <h3 class="text-[#d4af37] text-lg flex items-center gap-2">
 <span class="w-6 h-[1px] bg-[#d4af37]"></span> TREND ANALYSIS
 </h3>
-<span class="text-[10px] text-[#99907c] uppercase tracking-wider">ADX(14) + SMA20 &middot; 400d Data</span>
+<span id="trend-analysis-tf-label" class="text-[10px] text-[#99907c] uppercase tracking-wider">ADX(14) + SMA20 &middot; 400d Daily Data</span>
 </div>
 <div id="trend-analysis-content">
 <div class="text-center text-[#99907c] text-sm py-4">Load a stock to see trend analysis.</div>
@@ -1123,6 +1123,21 @@
                         })
                         .catch(e => console.error('Recommendation fetch error:', e));
                 } catch(e) { console.error('Recommendation outer error:', e); }
+
+                // Update Trend Analysis sesuai timeframe chart
+                try {
+                    fetch('/trend-analysis?ticker=' + encodeURIComponent(ticker) + '&tf=' + tf)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.trend_analysis) {
+                                // Update label
+                                const tfLabelEl = document.getElementById('trend-analysis-tf-label');
+                                if (tfLabelEl) tfLabelEl.textContent = 'ADX(14) + SMA20 &middot; ' + (data.tf_label || 'Daily Data');
+                                renderTrendAnalysis(data);
+                            }
+                        })
+                        .catch(e => console.error('Trend analysis fetch error:', e));
+                } catch(e) { console.error('Trend analysis outer error:', e); }
             } else { console.log('ticker empty, skipping SL fetch'); }
         }
 
