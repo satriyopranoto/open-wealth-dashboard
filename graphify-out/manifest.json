@@ -9,11 +9,6 @@
     "ast_hash": "ee7b9e4e868e604b4857673e3e5410cf",
     "semantic_hash": ""
   },
-  ".vscode/settings.json": {
-    "mtime": 1778755419.126942,
-    "ast_hash": "24cbe86a17756c4eafc3009b63e5435e",
-    "semantic_hash": ""
-  },
   "_test_dcf.py": {
     "mtime": 1780616433.5494685,
     "ast_hash": "7cf7d9375f31e68f845724f72bb83de2",
@@ -77,6 +72,86 @@
   "templates/logs.html": {
     "mtime": 1779500022.3879275,
     "ast_hash": "d4c5c1af7c51059e6f67ce2368bad680",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\app.py": {
+    "mtime": 1784608910.1782224,
+    "ast_hash": "8fd0a483c0743f422ba59d9aa14ebe2b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\bokeh_chart.py": {
+    "mtime": 1784105686.2339516,
+    "ast_hash": "71128915bf98c0559ca0c7d743ae9529",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\downloader.py": {
+    "mtime": 1784103426.633665,
+    "ast_hash": "997f3c0b00d979514e61499f455485ff",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\log_utils.py": {
+    "mtime": 1784103426.648461,
+    "ast_hash": "ebc3aba92ed6584399629ff8c033387b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\_test_dcf.py": {
+    "mtime": 1784103426.6281533,
+    "ast_hash": "a8dae361e869432549343e1afa19891f",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\.claude\\settings.json": {
+    "mtime": 1784103426.6216621,
+    "ast_hash": "af058e0a726395eec77afb70b146f878",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\.claude\\settings.local.json": {
+    "mtime": 1784103426.6216621,
+    "ast_hash": "a4de63e92047f305bd3f6c32123fa4c3",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\AGENTS.md": {
+    "mtime": 1784257818.6774094,
+    "ast_hash": "0236a12a459c277f7963ddbc2f954554",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\CLAUDE.md": {
+    "mtime": 1784103426.6266499,
+    "ast_hash": "cb5e7c3e8f52ead3c13d23ab7c4b95ce",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\CONFIG.md": {
+    "mtime": 1784103426.6266499,
+    "ast_hash": "2179ec349bac265567dba364de724c3e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\docker-compose.yml": {
+    "mtime": 1784103426.6311548,
+    "ast_hash": "fdcd3796f723e75021e296b9d9e04b69",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\README.md": {
+    "mtime": 1784103426.6281533,
+    "ast_hash": "7cab25766c134d5c3205c9cb21992ac8",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\requirements.txt": {
+    "mtime": 1784103426.6504664,
+    "ast_hash": "d5f9d51d86c05726ef4a2f82bd558066",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\docs\\plans\\2026-05-23-action-logging.md": {
+    "mtime": 1784103426.6326604,
+    "ast_hash": "5b212a632984a5fc3fc63848048b81b8",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\templates\\index.html": {
+    "mtime": 1784385370.5889945,
+    "ast_hash": "4f92148d59544ccf33f14f8eac27815b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\satri\\code\\stocktrade\\templates\\logs.html": {
+    "mtime": 1784103426.6529791,
+    "ast_hash": "f5a7d6ced7bdafe843aeef60aadc534e",
     "semantic_hash": ""
   }
 }

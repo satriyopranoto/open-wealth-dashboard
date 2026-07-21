@@ -4,12 +4,12 @@ Open-source stock analysis engine for US and Indonesian (IDX) markets. Built wit
 
 ## Features
 
-- **Stock Analyzer** — RSI (14), Donchian Channel Stop Loss, candlestick chart, BUY/HOLD/SELL recommendation
+- **Stock Analyzer** — RSI (14), Donchian Channel Stop Loss, candlestick chart, timeframes (H1/H4/D1/W1/MN), BUY/HOLD/SELL recommendation
 ![Stock Analyzer](image.png)
 - **Fundamental Screeners** — Most Active, Day Gainers, Net Net Strategy, Acquirers Multiple (both US & ID)
 ![One of fundamental screener](image-2.png)
-- **Technical Screener** — Bollinger Band Breakout screener against a local watchlist
-![Breakout Screener](image-3.png)
+- **Technical Screeners** — Basis ADX screener + Basis ADX Multi-TF screener against watchlist (daily & H1+daily)
+|![Basis ADX Screener](image-3.png)
 - **Risk Management** — Client-side lot size calculator based on capital, risk %, and stop loss
 ![Lot size calculation](image-4.png)
 - **Fundamental Data** — 12 core metrics, company profile, ownership structure (major + institutional holders)
@@ -26,34 +26,44 @@ Open-source stock analysis engine for US and Indonesian (IDX) markets. Built wit
 
 ## Screener Watchlists
 
-The BB Breakout screener and Data Synchronization features require watchlist files in the project root:
+The Basis ADX screeners and Data Synchronization features require watchlist files in the project root:
 
 - `uslist.csv` — US tickers, must have a `Symbol` column
 - `idlist.csv` — Indonesian tickers (with `.JK` suffix), must have a `Symbol` column
 
 ## Architecture
 
-Single-file Flask backend ([app.py](app.py)) + single-page HTML frontend ([templates/index.html](templates/index.html)). No database — all persistence is file-based in `cache/`.
+Single-page Flask backend ([app.py](app.py), [bokeh_chart.py](bokeh_chart.py), [log_utils.py](log_utils.py)) + single-page HTML frontend ([templates/index.html](templates/index.html)). No database — all persistence is file-based in `cache/`.
 
 ### Backend routes
 
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/` | GET | Serve the SPA |
-| `/analyze` | POST | Full stock analysis (cached) |
+| `/assets/<path>` | GET | Static assets (favicon, etc.) |
+| `/analyze` | GET, POST | Full stock analysis (cached); accepts `?ticker=AAPL&tf=1h` |
 | `/refresh` | POST | Force re-download + re-analyze |
-| `/screener/most-active` | GET | ID most active stocks |
-| `/screener/day-gainers` | GET | ID day gainers |
-| `/screener/net-net` | GET | ID net net strategy |
-| `/screener/acquirers-multiple` | GET | ID acquirers multiple |
-| `/screener/us-*` | GET | Same screeners for US market |
-| `/screener/id-bb-breakout` | POST | ID BB breakout (scans idlist.csv) |
-| `/screener/us-bb-breakout` | POST | US BB breakout (scans uslist.csv) |
-| `/screener/bb-progress` | GET | SSE stream for BB screener progress |
-| `/extract/id` | POST | Background bulk download for idlist.csv |
-| `/extract/us` | POST | Background bulk download for uslist.csv |
-| `/extract/progress` | GET | SSE stream for extraction progress |
-| `/extract/status` | GET | Current extraction status + rate limit check |
+| `/chart_html/<ticker>` | GET | Standalone Bokeh chart HTML (iframe); accepts `?tf=1d\|1h\|4h\|1wk\|1mo` |
+| `/sl` | GET | Donchian SL for timeframe; accepts `?ticker=AAPL&tf=1h` |
+| `/recommendation` | GET | BUY/HOLD/SELL recommendation; accepts `?ticker=AAPL&tf=1h` |
+| `/trend-analysis` | GET | ADX+DI trend analysis for timeframe |
+| `/screener/most-active` | GET, POST | ID most active stocks |
+| `/screener/day-gainers` | GET, POST | ID day gainers |
+| `/screener/net-net` | GET, POST | ID net net strategy |
+| `/screener/acquirers-multiple` | GET, POST | ID acquirers multiple |
+| `/screener/us-most-active` | GET, POST | US most active stocks |
+| `/screener/us-day-gainers` | GET, POST | US day gainers |
+| `/screener/us-net-net` | GET, POST | US net net strategy |
+| `/screener/us-acquirers-multiple` | GET, POST | US acquirers multiple |
+| `/screener/id-basis-adx` | GET, POST | ID Basis ADX screener (daily) |
+| `/screener/us-basis-adx` | GET, POST | US Basis ADX screener (daily) |
+| `/screener/basis-adx-progress` | GET | SSE stream for Basis ADX progress |
+| `/screener/id-basis-adx-mt` | GET, POST | ID Basis ADX multi-TF (H1 + daily DI) |
+| `/screener/us-basis-adx-mt` | GET, POST | US Basis ADX multi-TF (H1 + daily DI) |
+| `/screener/basis-adx-mt-progress` | GET | SSE stream for Basis ADX MT progress |
+| `/screener/id-fundamental` | GET, POST | ID fundamental screener |
+| `/screener/us-fundamental` | GET, POST | US fundamental screener |
+| `/screener/fundamental-progress` | GET | SSE stream for fundamental progress |
 | `/logs` | GET | View usage logs with date & limit filters |
 
 ### Docker Networking & Client IP
@@ -113,7 +123,7 @@ View logs in-browser at `/logs?date=2026-05-23&limit=50`. Date picker and limit 
 ### Rate limiting
 
 - Data synchronization (bulk extraction) enforces a 60-minute cooldown per watchlist, checked against the cache mtime of the first ticker in the list.
-- BB Breakout screener runs synchronously per request; concurrent requests are rejected with HTTP 409.
+- Concurrent requests to the same screener type are rejected with HTTP 409.
 
 ## Deployment
 
