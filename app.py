@@ -882,6 +882,51 @@ def calculate_bollinger_bands(df, period=20, num_std=2):
     return upper, middle, lower
 
 
+def get_recommendation(last_low, last_price, last_sl, last_basis,
+                       pdi_above_mdi=False, adx_strong=False,
+                       pdi_rising=False, adx_rising=False, is_nan=True,
+                       daily_mt_ok=None):
+    """
+    Rekomendasi tunggal — samakan dengan Basis ADX Screener logic.
+    
+    Parameters
+    ----------
+    last_low, last_price, last_sl, last_basis : float
+        Price/indicator values for current bar.
+    pdi_above_mdi : bool
+        True if +DI > -DI
+    adx_strong : bool
+        True if ADX > 20
+    pdi_rising : bool
+        True if +DI > +DI[5]
+    adx_rising : bool
+        True if ADX > ADX[5]
+    is_nan : bool
+        True if any indicator is NaN
+    daily_mt_ok : bool or None
+        None = skip multi-TF check (standard).
+        True/False = daily DI dominance must pass for BUY.
+    
+    Returns (recommendation, color, icon)
+    """
+    buy_conditions = (
+        not is_nan
+        and pdi_above_mdi and adx_strong
+        and pdi_rising and adx_rising
+    )
+    if daily_mt_ok is not None:
+        buy_conditions = buy_conditions and daily_mt_ok
+    
+    if last_low > last_sl and last_price > last_basis:
+        if buy_conditions:
+            return "BUY", "#4ade80", "🟢"
+        return "HOLD LONG", "#fbbf24", "🟡"
+    elif last_price > last_sl:
+        return "HOLD LONG", "#fbbf24", "🟡"
+    else:
+        return "SHORT SELL", "#f87171", "🔴"
+
+
 def calculate_adx(df, period=14):
     """
     Menghitung ADX, +DI (PDI), dan -DI (MDI)
@@ -1201,24 +1246,12 @@ def analyze_stock():
         is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
 
         # --- Logika Rekomendasi (samakan dengan Basis ADX Screener) ---
-        if last_low > last_sl and last_price > last_basis:
-            if (not is_nan
-                    and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
-                recommendation = "BUY"
-                color = "#4ade80"
-                icon = "🟢"
-            else:
-                recommendation = "HOLD LONG"
-                color = "#fbbf24"
-                icon = "🟡"
-        elif last_price > last_sl:
-            recommendation = "HOLD LONG"
-            color = "#fbbf24"
-            icon = "🟡"
-        else:
-            recommendation = "SHORT SELL"
-            color = "#f87171"
-            icon = "🔴"
+        recommendation, color, icon = get_recommendation(
+            last_low=last_low, last_price=last_price, last_sl=last_sl,
+            last_basis=last_basis,
+            pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+            pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
+        )
 
 
         # 3. Persiapan Data untuk Grafik
@@ -1429,19 +1462,13 @@ def get_recommendation_for_timeframe():
             daily_mt_ok = (not np.isnan(d_pdi) and not np.isnan(d_mdi) and d_pdi > d_mdi)
 
             # ── MT Recommendation ──
-            if last_low > last_sl and last_price > last_basis:
-                if (not is_nan and pdi_above_mdi and adx_strong and pdi_rising and adx_rising and daily_mt_ok):
-                    recommendation = "BUY"
-                    color = "#4ade80"
-                else:
-                    recommendation = "HOLD LONG"
-                    color = "#fbbf24"
-            elif last_price > last_sl:
-                recommendation = "HOLD LONG"
-                color = "#fbbf24"
-            else:
-                recommendation = "SHORT SELL"
-                color = "#f87171"
+            recommendation, color, icon = get_recommendation(
+                last_low=last_low, last_price=last_price, last_sl=last_sl,
+                last_basis=last_basis,
+                pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
+                daily_mt_ok=daily_mt_ok,
+            )
 
             adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
 
@@ -1488,19 +1515,12 @@ def get_recommendation_for_timeframe():
             is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
 
             # ── Standard Recommendation ──
-            if last_low > last_sl and last_price > last_basis:
-                if (not is_nan and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
-                    recommendation = "BUY"
-                    color = "#4ade80"
-                else:
-                    recommendation = "HOLD LONG"
-                    color = "#fbbf24"
-            elif last_price > last_sl:
-                recommendation = "HOLD LONG"
-                color = "#fbbf24"
-            else:
-                recommendation = "SHORT SELL"
-                color = "#f87171"
+            recommendation, color, icon = get_recommendation(
+                last_low=last_low, last_price=last_price, last_sl=last_sl,
+                last_basis=last_basis,
+                pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
+            )
 
             adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
 
@@ -2390,16 +2410,14 @@ def run_basis_adx_screener(list_path, list_type):
                 adx_rising = last_adx > adx_5ago
                 is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
                 
-                if last_low > last_sl and last_price > last_basis:
-                    if (not is_nan
-                            and pdi_above_mdi and adx_strong and pdi_rising and adx_rising):
-                        recommendation = "BUY"
-                    else:
-                        recommendation = "HOLD LONG"
-                elif last_price > last_sl:
-                    recommendation = "HOLD LONG"
-                else:
-                    recommendation = "SHORT SELL"
+                # Determine recommendation
+                recommendation, _, _ = get_recommendation(
+                    last_low=last_low, last_price=last_price,
+                    last_sl=last_sl, last_basis=last_basis,
+                    pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                    pdi_rising=pdi_rising, adx_rising=adx_rising,
+                    is_nan=is_nan,
+                )
                 
                 # Calculate ADX+SMA% for trend strength
                 adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
@@ -3480,17 +3498,13 @@ def run_basis_adx_multitf_screener(list_path, list_type):
                 daily_mt_ok = (not np.isnan(d_pdi) and not np.isnan(d_mdi) and d_pdi > d_mdi)
                 
                 # 4. Determine recommendation with Multi-TF filter
-                if last_low > last_sl and last_price > last_basis:
-                    if (not is_nan
-                            and pdi_above_mdi and adx_strong and pdi_rising and adx_rising
-                            and daily_mt_ok):
-                        recommendation = "BUY"
-                    else:
-                        recommendation = "HOLD LONG"
-                elif last_price > last_sl:
-                    recommendation = "HOLD LONG"
-                else:
-                    recommendation = "SHORT SELL"
+                recommendation, _, _ = get_recommendation(
+                    last_low=last_low, last_price=last_price,
+                    last_sl=last_sl, last_basis=last_basis,
+                    pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                    pdi_rising=pdi_rising, adx_rising=adx_rising,
+                    is_nan=is_nan, daily_mt_ok=daily_mt_ok,
+                )
                 
                 adx_sma_pct, trend_commentary = calculate_adx_sma_pct(data, adx_series, pdi_series, mdi_series, middle_bb)
                 
