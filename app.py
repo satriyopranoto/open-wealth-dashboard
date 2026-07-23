@@ -1133,6 +1133,7 @@ def analyze_stock():
     
     ticker = request.args.get('ticker') or request.form.get('ticker', '').strip().upper()
     force_refresh = request.args.get('force_refresh', request.form.get('force_refresh', 'false')).lower() == 'true'
+    tf = request.args.get('tf', '1d')
     
     log_action('analyze', 'analyze_stock', params={'ticker': ticker, 'force_refresh': force_refresh})
     start_time = time.time()
@@ -1144,8 +1145,36 @@ def analyze_stock():
 
     print(f"Memproses analisis untuk ticker: {ticker} (force_refresh={force_refresh})")
 
-    # 1. Download Data
-    data, metadata, error_msg = download_stock_data(ticker, period="400d", force_refresh=force_refresh)
+    # 1. Download Data sesuai timeframe
+    is_intraday = tf in ('1h', '4h')
+    if is_intraday:
+        # ── MT Path (H1/H4) ──
+        data = download_h1_data(ticker, period="60d")
+        if data is None or len(data) < 60:
+            log_action('analyze', 'analyze_stock', params={'ticker': ticker}, status='error',
+                      detail=f'Insufficient H1 data for {ticker}', duration_ms=(time.time() - start_time) * 1000)
+            return jsonify({"status": "error", "message": f"Insufficient H1 data for {ticker}"}), 404
+
+        numeric_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+        for col in numeric_cols:
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+        data = data.dropna(subset=['Close'])
+
+        if tf == '4h' and len(data) > 0:
+            data = data.resample('4h').agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min',
+                'Close': 'last', 'Volume': 'sum'
+            }).dropna()
+    else:
+        # ── Standard Path (D1/W1/MN) ──
+        tf_config = {
+            '1d':  {'period': '400d', 'interval': '1d'},
+            '1wk': {'period': '2y',   'interval': '1wk'},
+            '1mo': {'period': '10y',  'interval': '1mo'},
+        }
+        config = tf_config.get(tf, tf_config['1d'])
+        data, metadata, error_msg = download_stock_data(ticker, period=config['period'], force_refresh=force_refresh)
     # TAMBAHKAN INI: Perbaikan MultiIndex yfinance
     if data is not None and isinstance(data.columns, pd.MultiIndex):
         data.columns = data.columns.get_level_values(0)
@@ -1245,13 +1274,26 @@ def analyze_stock():
         adx_rising = last_adx > adx_5ago
         is_nan = np.isnan(last_adx) or np.isnan(last_pdi) or np.isnan(last_mdi)
 
-        # --- Logika Rekomendasi (samakan dengan Basis ADX Screener) ---
-        recommendation, color, icon = get_recommendation(
-            last_low=last_low, last_price=last_price, last_sl=last_sl,
-            last_basis=last_basis,
-            pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
-            pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
-        )
+        # ── Rekomendasi sesuai timeframe ──
+        if is_intraday:
+            # MT path: daily DI from H1 resample
+            d_pdi, d_mdi = calculate_daily_di_from_h1(data)
+            daily_mt_ok = (not np.isnan(d_pdi) and not np.isnan(d_mdi) and d_pdi > d_mdi)
+            recommendation, color, icon = get_recommendation(
+                last_low=last_low, last_price=last_price, last_sl=last_sl,
+                last_basis=last_basis,
+                pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
+                daily_mt_ok=daily_mt_ok,
+            )
+        else:
+            # Standard path
+            recommendation, color, icon = get_recommendation(
+                last_low=last_low, last_price=last_price, last_sl=last_sl,
+                last_basis=last_basis,
+                pdi_above_mdi=pdi_above_mdi, adx_strong=adx_strong,
+                pdi_rising=pdi_rising, adx_rising=adx_rising, is_nan=is_nan,
+            )
 
 
         # 3. Persiapan Data untuk Grafik
@@ -1309,8 +1351,10 @@ def analyze_stock():
         result = {
             "status": "success",
             "ticker": ticker,
+            "tf": tf,
             "rsi": None if last_rsi is None or (isinstance(last_rsi, float) and math.isnan(last_rsi)) else float(last_rsi),
             "recommendation": recommendation,
+            "color": color,
             "last_price": float(last_price) if not math.isnan(last_price) else None,
             "date": str(current_date),
             "chart_div": chart_div,

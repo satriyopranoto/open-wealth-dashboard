@@ -830,7 +830,8 @@
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
                             history.pushState({ view: 'analysis' }, '', '#analyze');
-                            analyzeStock();
+                            const screenerTf = type.endsWith('-mt') ? '1h' : '1d';
+                            analyzeStock(screenerTf);
                         };
                         
                         const changeClass = stock.change_pct >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]';
@@ -911,10 +912,13 @@
             }
         });
 
-        async function analyzeStock() {
+        async function analyzeStock(tf) {
             const ticker = document.getElementById('ticker').value.toUpperCase();
             const statusDiv = document.getElementById('status');
             const resultArea = document.getElementById('result-area');
+
+            // Default timeframe = daily, unless specified
+            if (typeof tf === 'undefined' || tf === null) tf = '1d';
 
             statusDiv.textContent = 'EXECUTING ANALYTIC PROTOCOLS...';
             statusDiv.className = 'loading text-[#d4af37]';
@@ -923,7 +927,7 @@
             document.getElementById('screener-progress').classList.add('hidden');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/analyze?ticker=${encodeURIComponent(ticker)}`, {
+                const response = await fetch(`${API_BASE_URL}/analyze?ticker=${encodeURIComponent(ticker)}&tf=${tf}`, {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' }
                 });
@@ -959,21 +963,25 @@
                     const recText = document.getElementById('rec-text-res');
 
                     if (data.recommendation.includes('BUY')) {
-                        recBox.style.borderLeftColor = '#4ade80';
+                        recBox.style.borderLeftColor = data.color || '#4ade80';
                         iconRes.textContent = '◆';
                         recText.textContent = 'STRATEGIC DIRECTIVE: BUY / ACCUMULATE';
-                        recText.style.color = '#4ade80';
+                        recText.style.color = data.color || '#4ade80';
                     } else if (data.recommendation.includes('SHORT SELL')) {
-                        recBox.style.borderLeftColor = '#f87171';
+                        recBox.style.borderLeftColor = data.color || '#f87171';
                         iconRes.textContent = '▼';
                         recText.textContent = 'STRATEGIC DIRECTIVE: SELL / REDUCE';
-                        recText.style.color = '#f87171';
+                        recText.style.color = data.color || '#f87171';
                     } else {
-                        recBox.style.borderLeftColor = '#fbbf24';
+                        recBox.style.borderLeftColor = data.color || '#fbbf24';
                         iconRes.textContent = '◇';
                         recText.textContent = 'STRATEGIC DIRECTIVE: HOLD / PROTECT';
-                        recText.style.color = '#fbbf24';
+                        recText.style.color = data.color || '#fbbf24';
                     }
+
+                    // Sync chart + SL + trend analysis sesuai timeframe
+                    const tfBtn = document.querySelector(`.tf-btn[onclick*="'${data.tf}'"]`);
+                    changeTimeframe(data.tf, tfBtn);
 
                     if (data.fundamental) {
                         const companyDescDiv = document.getElementById('company-description');
@@ -1456,8 +1464,9 @@
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
                             history.pushState({ view: 'analysis' }, '', '#analyze');
-                            analyzeStock();
-                };
+                            const screenerTf = type.endsWith('-mt') ? '1h' : '1d';
+                            analyzeStock(screenerTf);
+                        };
                 
                 const changeClass = stock.change_pct >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]';
                 const changeSign = stock.change_pct >= 0 ? '+' : '';
