@@ -514,6 +514,7 @@
         }
 
         async function loadScreener(type) {
+            currentScreenerType = type;
             // Always cleanup previous run before starting fresh
             if (eventSource) {
                 eventSource.close();
@@ -885,6 +886,7 @@
 
         let eventSource = null;
         let screenerRunning = false;
+        let currentScreenerType = '';
         let savedScreenerData = null;    // Last screener results for back-navigation
         let savedScreenerType = '';
         let savedScreenerTitle = '';
@@ -1464,7 +1466,7 @@
                             document.getElementById('screener-results').classList.add('hidden');
                             document.getElementById('screener-progress').classList.add('hidden');
                             history.pushState({ view: 'analysis' }, '', '#analyze');
-                            const screenerTf = type.endsWith('-mt') ? '1h' : '1d';
+                            const screenerTf = currentScreenerType.endsWith('-mt') ? '1h' : '1d';
                             analyzeStock(screenerTf);
                         };
                 
