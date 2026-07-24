@@ -3033,7 +3033,7 @@ def screener_id_fundamental():
 
     try:
         run_fundamental_screener(idlist_path, 'ID')
-        
+
         if _fund['results']:
             results_df = pd.DataFrame(_fund['results'])
             save_screener_to_cache('id-fundamental', results_df)
