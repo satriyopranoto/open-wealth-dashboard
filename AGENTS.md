@@ -223,3 +223,38 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 
 **Note:** Initial recommendation (when clicking Analyze) uses daily/standard logic. Recommendation updates in real-time when clicking timeframe buttons, same pattern as SL Timeframe Sync (Section 10).
 
+---
+
+### 13. SSE Progress via Cloudflare Tunnel (Fixed)
+
+**Symptom:** Screener progress bar stuck at "0/0" when accessing via Cloudflare Tunnel (works fine on localhost:5000).
+
+**Root cause:** Cloudflare's free trycloudflare tunnel does not properly support Server-Sent Events (SSE) streaming. Even with `text/event-stream` content-type and anti-buffer headers, the tunnel buffers the entire response or terminates idle streaming connections.
+
+**Fix (both backend + frontend):**
+
+**Backend** (`app.py`):
+- Added new `/screener/progress-json` endpoint that returns current progress as simple JSON
+- Accepts `?type=basis-adx|basis-adx-mt|fundamental` parameter
+- Searches running/completed progress by client IP or any IP
+- Returns JSON: `{status, current_ticker, progress, total, results_count, message, has_results}`
+
+**Frontend** (`templates/index.html`):
+- Replaced `EventSource` with `setInterval` + `fetch()` polling (every 1.5s)
+- Max 90 retries (~90s timeout), then shows TIMEOUT
+- Same progress display logic (counter, bar, percentage, ticker label)
+- On completion/error: clears interval and handles results like before
+
+**SSE endpoints remain** for backward compatibility (local-only use):
+- `/screener/basis-adx-progress`
+- `/screener/basis-adx-mt-progress`
+- `/screener/fundamental-progress`
+
+**Key locations:**
+- `app.py` → `/screener/progress-json` (new endpoint, ~line 3119)
+- `templates/index.html` → `loadScreener()` — polling logic replaces EventSource
+- `templates/index.html` → `window._screenerPollInterval` — global poll handle
+
+**Note:** This is a known limitation of Cloudflare's free trycloudflare tunnel. The same issue affects all SSE-based endpoints through the tunnel. JSON polling is the reliable workaround.
+
+|

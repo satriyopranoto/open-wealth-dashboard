@@ -3116,6 +3116,54 @@ def screener_fundamental_progress():
     return response
 
 
+@app.route('/screener/progress-json', methods=['GET', 'OPTIONS'])
+def screener_progress_json():
+    """JSON polling endpoint for screener progress (reliable through Cloudflare tunnel)"""
+    ptype = request.args.get('type', 'basis-adx')
+    if ptype == 'basis-adx':
+        pmap = basis_adx_screener_progress_map
+        pkey = 'basis-adx'
+    elif ptype == 'basis-adx-mt':
+        pmap = basis_adx_mt_screener_progress_map
+        pkey = 'basis-adx-mt'
+    else:
+        pmap = fundamental_screener_progress_map
+        pkey = 'fundamental'
+
+    _client_ip = _get_client_ip()
+    if _client_ip in pmap and pmap[_client_ip]['is_running']:
+        p = pmap[_client_ip]
+    else:
+        # Search any running
+        for ip, state in pmap.items():
+            if state['is_running']:
+                p = state
+                break
+        else:
+            # Last completed results
+            for ip, state in pmap.items():
+                if state['status'] == 'completed' and state['results']:
+                    p = state
+                    break
+            else:
+                return jsonify({
+                    'status': 'idle', 'progress': 0, 'total': 0,
+                    'current_ticker': '', 'message': 'No active screener',
+                    'results_count': 0, 'has_results': False
+                })
+
+    return jsonify({
+        'status': p['status'],
+        'current_ticker': p['current_ticker'],
+        'progress': p['progress'],
+        'total': p['total'],
+        'results_count': len(p['results']),
+        'message': p['message'],
+        'run_id': p['run_id'],
+        'has_results': p['status'] == 'completed' and len(p['results']) > 0,
+    })
+
+
 @app.route('/logs', methods=['GET'])
 def view_logs():
     """Halaman untuk melihat log activity dengan filter tanggal dan limit."""

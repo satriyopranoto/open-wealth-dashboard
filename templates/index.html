@@ -516,6 +516,10 @@
         async function loadScreener(type) {
             currentScreenerType = type;
             // Always cleanup previous run before starting fresh
+            if (window._screenerPollInterval) {
+                clearInterval(window._screenerPollInterval);
+                window._screenerPollInterval = null;
+            }
             if (eventSource) {
                 eventSource.close();
                 eventSource = null;
@@ -607,27 +611,42 @@
                     if (extractionPercent) extractionPercent.textContent = '0%';
                     extractionTicker.textContent = '';
                     
-                    let progressEndpoint = '/screener/bb-progress';
+                    let progressType = 'basis-adx';
                     if (type === 'us-fundamental' || type === 'id-fundamental') {
-                        progressEndpoint = '/screener/fundamental-progress';
+                        progressType = 'fundamental';
                     } else if (type === 'us-basis-adx' || type === 'id-basis-adx') {
-                        progressEndpoint = '/screener/basis-adx-progress';
+                        progressType = 'basis-adx';
                     } else if (type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt') {
-                        progressEndpoint = '/screener/basis-adx-mt-progress';
+                        progressType = 'basis-adx-mt';
                     }
-                    // Close previous SSE (extraction or other screener) sebelum bikin baru
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
+                    // Close previous polling
+                    if (window._screenerPollInterval) {
+                        clearInterval(window._screenerPollInterval);
+                        window._screenerPollInterval = null;
                     }
-                    eventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
-                    const currentSource = eventSource;
                     let screenerData = null;
                     let hasCompleted = false;
+                    let pollRetries = 0;
+                    const maxPollRetries = 90; // ~90s timeout
                     
-                    eventSource.onmessage = function(event) {
+                    window._screenerPollInterval = setInterval(async () => {
+                        if (hasCompleted || pollRetries >= maxPollRetries) {
+                            clearInterval(window._screenerPollInterval);
+                            window._screenerPollInterval = null;
+                            if (!hasCompleted) {
+                                extractionStatus.textContent = 'TIMEOUT - No response';
+                                extractionProgress.classList.add('hidden');
+                                screenerRunning = false;
+                            }
+                            return;
+                        }
+                        pollRetries++;
                         try {
-                            const progress = JSON.parse(event.data);
+                            const resp = await fetch(`${API_BASE_URL}/screener/progress-json?type=${progressType}`, {
+                                method: 'GET',
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const progress = await resp.json();
                             
                             extractionStatus.textContent = progress.message || 'Processing...';
                             extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
@@ -639,15 +658,17 @@
                                 if (extractionPercent) extractionPercent.textContent = `${percent}%`;
                             }
                             
+                            if (progress.status === 'idle' && progress.results_count === 0 && pollRetries < 3) {
+                                // Allow a few polls for the screener to start
+                                return;
+                            }
+                            
                             if (progress.status === 'completed' || progress.status === 'error') {
                                 hasCompleted = true;
+                                clearInterval(window._screenerPollInterval);
+                                window._screenerPollInterval = null;
                                 statusDiv.className = progress.status === 'completed' ? 'success text-[#4ade80]' : 'error text-red-400';
                                 extractionProgress.classList.add('hidden');
-                                // Only close if this source is still the current one
-                                if (eventSource === currentSource) {
-                                    eventSource.close();
-                                    eventSource = null;
-                                }
                                 
                                 if (screenerData && screenerData.data && screenerData.data.length > 0) {
                                     // Tab pertama — data sudah ada dari response POST
@@ -676,22 +697,8 @@
                                     setTimeout(retryFetch, 1000);
                                 }
                             }
-                        } catch (e) {
-                            console.error('Error parsing progress:', e);
-                        }
-                    };
-                    
-                    eventSource.onerror = function() {
-                        // Jangan overwrite kalau sudah completed dari onmessage
-                        if (!hasCompleted) {
-                            statusDiv.textContent = 'CONNECTION LOST';
-                            statusDiv.className = 'error text-red-400';
-                        }
-                        if (eventSource === currentSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                    };
+                        } catch(e) { /* poll failed silently */ }
+                    }, 1500);
                     
                     statusDiv.textContent = (type === 'us-fundamental' || type === 'id-fundamental') ? 'RUNNING FUNDAMENTAL SCREENER...' : 'RUNNING SCREENER...';
                     statusDiv.className = 'loading text-[#d4af37]';
