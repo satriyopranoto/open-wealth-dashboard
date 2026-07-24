@@ -611,42 +611,27 @@
                     if (extractionPercent) extractionPercent.textContent = '0%';
                     extractionTicker.textContent = '';
                     
-                    let progressType = 'basis-adx';
+                    let progressEndpoint = '/screener/basis-adx-progress';
                     if (type === 'us-fundamental' || type === 'id-fundamental') {
-                        progressType = 'fundamental';
+                        progressEndpoint = '/screener/fundamental-progress';
                     } else if (type === 'us-basis-adx' || type === 'id-basis-adx') {
-                        progressType = 'basis-adx';
+                        progressEndpoint = '/screener/basis-adx-progress';
                     } else if (type === 'us-basis-adx-mt' || type === 'id-basis-adx-mt') {
-                        progressType = 'basis-adx-mt';
+                        progressEndpoint = '/screener/basis-adx-mt-progress';
                     }
-                    // Close previous polling
-                    if (window._screenerPollInterval) {
-                        clearInterval(window._screenerPollInterval);
-                        window._screenerPollInterval = null;
+                    // Close previous SSE
+                    if (window._extractionEventSource) {
+                        window._extractionEventSource.close();
+                        window._extractionEventSource = null;
                     }
+                    window._extractionEventSource = new EventSource(`${API_BASE_URL}${progressEndpoint}`);
+                    const currentSource = window._extractionEventSource;
                     let screenerData = null;
                     let hasCompleted = false;
-                    let pollRetries = 0;
-                    const maxPollRetries = 90; // ~90s timeout
                     
-                    window._screenerPollInterval = setInterval(async () => {
-                        if (hasCompleted || pollRetries >= maxPollRetries) {
-                            clearInterval(window._screenerPollInterval);
-                            window._screenerPollInterval = null;
-                            if (!hasCompleted) {
-                                extractionStatus.textContent = 'TIMEOUT - No response';
-                                extractionProgress.classList.add('hidden');
-                                screenerRunning = false;
-                            }
-                            return;
-                        }
-                        pollRetries++;
+                    window._extractionEventSource.onmessage = function(event) {
                         try {
-                            const resp = await fetch(`${API_BASE_URL}/screener/progress-json?type=${progressType}`, {
-                                method: 'GET',
-                                headers: { 'Accept': 'application/json' }
-                            });
-                            const progress = await resp.json();
+                            const progress = JSON.parse(event.data);
                             
                             extractionStatus.textContent = progress.message || 'Processing...';
                             extractionCounter.textContent = `${progress.progress} / ${progress.total}`;
@@ -658,18 +643,14 @@
                                 if (extractionPercent) extractionPercent.textContent = `${percent}%`;
                             }
                             
-                            if (progress.status === 'idle' && progress.results_count === 0 && pollRetries < 3) {
-                                // Allow a few polls for the screener to start
-                                return;
-                            }
-                            
                             if (progress.status === 'completed' || progress.status === 'error') {
                                 hasCompleted = true;
-                                clearInterval(window._screenerPollInterval);
-                                window._screenerPollInterval = null;
                                 statusDiv.className = progress.status === 'completed' ? 'success text-[#4ade80]' : 'error text-red-400';
                                 extractionProgress.classList.add('hidden');
-                                
+                                if (window._extractionEventSource === currentSource) {
+                                    window._extractionEventSource.close();
+                                    window._extractionEventSource = null;
+                                }
                                 if (screenerData && screenerData.data && screenerData.data.length > 0) {
                                     // Tab pertama — data sudah ada dari response POST
                                     statusDiv.textContent = `SCREENER COMPLETE: ${screenerData.count} stocks analyzed`;
@@ -697,8 +678,8 @@
                                     setTimeout(retryFetch, 1000);
                                 }
                             }
-                        } catch(e) { /* poll failed silently */ }
-                    }, 1500);
+                        } catch(e) { console.error('SSE error:', e); }
+                    };
                     
                     statusDiv.textContent = (type === 'us-fundamental' || type === 'id-fundamental') ? 'RUNNING FUNDAMENTAL SCREENER...' : 'RUNNING SCREENER...';
                     statusDiv.className = 'loading text-[#d4af37]';
