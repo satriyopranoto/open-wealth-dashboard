@@ -2933,7 +2933,17 @@ def screener_us_fundamental():
         log_action('screener_fundamental', 'us_fundamental', params={'market': 'US'}, status='error',
                   detail='uslist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File uslist.csv tidak ditemukan"}), 404
-    
+
+    # Reset progress BEFORE starting — menghindari stale total/progress dari run sebelumnya
+    _fund['progress'] = 0
+    _fund['total'] = 0
+    _fund['results'] = []
+    _fund['current_ticker'] = ''
+    _fund['message'] = 'Starting...'
+    _fund['status'] = 'starting'
+    _fund['is_running'] = False
+    _fund["run_id"] += 1
+
     try:
         run_fundamental_screener(uslist_path, 'US')
         
@@ -3010,7 +3020,17 @@ def screener_id_fundamental():
         log_action('screener_fundamental', 'id_fundamental', params={'market': 'ID'}, status='error',
                   detail='idlist.csv not found', duration_ms=(time.time() - start_time) * 1000)
         return jsonify({"status": "error", "message": "File idlist.csv tidak ditemukan"}), 404
-    
+
+    # Reset progress BEFORE starting — menghindari stale total/progress dari run sebelumnya
+    _fund['progress'] = 0
+    _fund['total'] = 0
+    _fund['results'] = []
+    _fund['current_ticker'] = ''
+    _fund['message'] = 'Starting...'
+    _fund['status'] = 'starting'
+    _fund['is_running'] = False
+    _fund["run_id"] += 1
+
     try:
         run_fundamental_screener(idlist_path, 'ID')
         
@@ -3131,13 +3151,29 @@ def screener_progress_json():
         pkey = 'fundamental'
 
     _client_ip = _get_client_ip()
-    p = pmap.get(_client_ip)
-    if p is None:
-        return jsonify({
-            'status': 'idle', 'progress': 0, 'total': 0,
-            'current_ticker': '', 'message': 'No active screener',
-            'results_count': 0, 'has_results': False
-        })
+    run_id = request.args.get('run_id', type=int)
+
+    if run_id is not None:
+        # Cari by run_id — handal buat user di belakang NAT/proxy
+        for ip, state in pmap.items():
+            if state.get('run_id') == run_id:
+                p = state
+                break
+        else:
+            return jsonify({
+                'status': 'idle', 'progress': 0, 'total': 0,
+                'current_ticker': '', 'message': 'No active screener',
+                'results_count': 0, 'has_results': False
+            })
+    else:
+        # Fallback IP-based (single user)
+        p = pmap.get(_client_ip)
+        if p is None:
+            return jsonify({
+                'status': 'idle', 'progress': 0, 'total': 0,
+                'current_ticker': '', 'message': 'No active screener',
+                'results_count': 0, 'has_results': False
+            })
     
     return jsonify({
         'status': p['status'],
