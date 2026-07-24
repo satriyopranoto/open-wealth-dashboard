@@ -2883,7 +2883,11 @@ def screener_basis_adx_progress():
             time.sleep(1)
     
     from flask import Response
-    return Response(generate(), mimetype='text/event-stream')
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Connection'] = 'keep-alive'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @app.route('/screener/us-fundamental', methods=['GET', 'POST', 'OPTIONS'])
@@ -3105,7 +3109,11 @@ def screener_fundamental_progress():
             time.sleep(1)
     
     from flask import Response
-    return Response(generate(), mimetype='text/event-stream')
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Connection'] = 'keep-alive'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @app.route('/logs', methods=['GET'])
@@ -3827,4 +3835,8 @@ def screener_basis_adx_mt_progress():
             time.sleep(1)
     
     from flask import Response
-    return Response(generate(), mimetype='text/event-stream')
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Connection'] = 'keep-alive'
+    response.headers['X-Accel-Buffering'] = 'no'
+    return response
