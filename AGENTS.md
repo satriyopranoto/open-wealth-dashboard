@@ -225,36 +225,22 @@ The chart is rendered via **iframe** instead of inline Bokeh components:
 
 ---
 
-### 13. SSE Progress via Cloudflare Tunnel (Fixed)
+### 13. SSE Progress via Cloudflare Tunnel (Known Issue)
 
-**Symptom:** Screener progress bar stuck at "0/0" when accessing via Cloudflare Tunnel (works fine on localhost:5000).
+**Symptom:** Screener progress bar stuck at "0/0" when accessing via Cloudflare Tunnel. Works fine on localhost.
 
-**Root cause:** Cloudflare's free trycloudflare tunnel does not properly support Server-Sent Events (SSE) streaming. Even with `text/event-stream` content-type and anti-buffer headers, the tunnel buffers the entire response or terminates idle streaming connections.
+**Status:** 🟡 **Unresolved** — SSE EventSource through Cloudflare's trycloudflare tunnel sometimes fails to stream progress updates.
 
-**Fix (both backend + frontend):**
+**Known cause:** Cloudflare's free tunnel may buffer or timeout long-lived SSE connections. The app now includes additional SSE headers (`Cache-Control: no-cache`, `X-Accel-Buffering: no`) to mitigate this.
 
-**Backend** (`app.py`):
-- Added new `/screener/progress-json` endpoint that returns current progress as simple JSON
-- Accepts `?type=basis-adx|basis-adx-mt|fundamental` parameter
-- Searches running/completed progress by client IP or any IP
-- Returns JSON: `{status, current_ticker, progress, total, results_count, message, has_results}`
-
-**Frontend** (`templates/index.html`):
-- Replaced `EventSource` with `setInterval` + `fetch()` polling (every 1.5s)
-- Max 90 retries (~90s timeout), then shows TIMEOUT
-- Same progress display logic (counter, bar, percentage, ticker label)
-- On completion/error: clears interval and handles results like before
-
-**SSE endpoints remain** for backward compatibility (local-only use):
-- `/screener/basis-adx-progress`
-- `/screener/basis-adx-mt-progress`
-- `/screener/fundamental-progress`
+**Workaround if SSE fails through tunnel:**
+- `/screener/progress-json?type=basis-adx|basis-adx-mt|fundamental` — JSON polling endpoint (manual use)
+- For reliable remote access, access the app directly via localhost:5000 (local network)
 
 **Key locations:**
-- `app.py` → `/screener/progress-json` (new endpoint, ~line 3119)
-- `templates/index.html` → `loadScreener()` — polling logic replaces EventSource
-- `templates/index.html` → `window._screenerPollInterval` — global poll handle
+- `app.py` → `/screener/progress-json` (fallback endpoint, line ~3119)
+- `app.py` → SSE endpoints at `/screener/basis-adx-progress`, `/screener/basis-adx-mt-progress`, `/screener/fundamental-progress`
 
-**Note:** This is a known limitation of Cloudflare's free trycloudflare tunnel. The same issue affects all SSE-based endpoints through the tunnel. JSON polling is the reliable workaround.
+**Note:** This was working previously through Cloudflare, regression may be related to Docker/Nginx setup changes or Cloudflare tunnel behavior changes.
 
 |
