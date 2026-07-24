@@ -1147,6 +1147,7 @@ def analyze_stock():
 
     # 1. Download Data sesuai timeframe
     is_intraday = tf in ('1h', '4h')
+    error_msg = None
     if is_intraday:
         # ── MT Path (H1/H4) ──
         data = download_h1_data(ticker, period="60d")
